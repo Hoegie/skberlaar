@@ -1,4 +1,4 @@
-//VERSION 1,0,1
+//VERSION LIVE 1,0,1
 var express    = require('express');
 var mysql      = require('mysql');
 var bodyParser = require('body-parser');
@@ -11,8 +11,8 @@ var join = require('path').join;
 var http = require('http');
 var path = require('path');
 var connection = mysql.createConnection({
-  //host     : 'degronckel.synology.me', 
-  host     : '192.168.25.7',
+  host     : 'degronckel.synology.me', 
+  //host     : '192.168.25.7',
   user     : 'root',
   password : 'Hoegaarden',
   database : 'skBerlaar'
