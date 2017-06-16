@@ -1,4 +1,4 @@
-//VERSION LIVE 1,0,1
+//VERSION 1,0,1
 var express    = require('express');
 var mysql      = require('mysql');
 var bodyParser = require('body-parser');
@@ -11,8 +11,8 @@ var join = require('path').join;
 var http = require('http');
 var path = require('path');
 var connection = mysql.createConnection({
-  host     : 'degronckel.synology.me', 
-  //host     : '192.168.25.7',
+  //host     : 'degronckel.synology.me', 
+  host     : '192.168.25.7',
   user     : 'root',
   password : 'Hoegaarden',
   database : 'skBerlaar'
@@ -980,6 +980,20 @@ connection.query('SELECT player_ID, first_name, last_name, pic_url FROM players 
   });
 });
 
+
+app.get("/players/otherteam/teamid/:teamid",function(req,res){
+connection.query('SELECT player_ID, first_name, last_name, pic_url FROM players where teamID <> ? ORDER BY last_name', req.params.teamid, function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+
 app.get("/confirmedplayers/eventid/:eventid",function(req,res){
 connection.query('SELECT confirmed_players FROM events where event_ID = ?', req.params.eventid, function(err, rows, fields) {
 /*connection.end();*/
@@ -1255,12 +1269,8 @@ connection.query(connquery, [data.teamid, data.year, data.eventtype], function(e
 });
 
 
-
-
-
-
 app.get("/events/confirmedplayers/:eventid",function(req,res){
-connection.query('SELECT confirmed_players, declined_players FROM events WHERE event_ID = ?', req.params.eventid, function(err, rows, fields) {
+connection.query('SELECT confirmed_players, declined_players, extra_players FROM events WHERE event_ID = ?', req.params.eventid, function(err, rows, fields) {
 /*connection.end();*/
   if (!err){
     console.log('The solution is: ', rows);
@@ -1270,6 +1280,66 @@ connection.query('SELECT confirmed_players, declined_players FROM events WHERE e
   }
   });
 });
+
+
+app.get("/events/extraplayers/:eventid",function(req,res){
+  connection.query('SELECT extra_players FROM events WHERE event_ID = ?', req.params.eventid, function(err, rows, fields) {
+      if (!err){
+      console.log('The solution is: ', rows);
+        var extras = '(' + rows[0].extra_players + ')';
+        console.log(extras);
+        var connquery = "SELECT player_ID, first_name, last_name, pic_url FROM players where player_ID IN " + extras;  
+        connection.query(connquery, function(err, rows, fields) {
+          if (!err){
+            console.log('The solution is: ', rows);
+            res.end(JSON.stringify(rows));
+          }else{
+            console.log('Error while performing Query.');
+          }
+        });
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+app.get("/events/totalplayers/:eventid/:teamid",function(req,res){
+connection.query('SELECT player_ID, first_name, last_name, pic_url FROM players where teamID = ?', req.params.teamid, function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    var players1 = rows;
+    connection.query('SELECT extra_players FROM events WHERE event_ID = ?', req.params.eventid, function(err, rows, fields) {
+      if (!err){
+      console.log('The solution is: ', rows);
+      if (rows[0].extra_players != 'none'){
+        var extras = '(' + rows[0].extra_players + ')';
+        console.log(extras);
+        var connquery = "SELECT player_ID, first_name, last_name, pic_url FROM players where player_ID IN " + extras;  
+        connection.query(connquery, function(err, rows, fields) {
+          if (!err){
+            console.log('The solution is: ', rows);
+            var players2 = rows;
+            var totalplayers = players1.concat(players2);
+            res.end(JSON.stringify(totalplayers));
+          }else{
+            console.log('Error while performing Query.');
+          }
+        });
+      } else {
+        res.end(JSON.stringify(players1));
+      }
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
 
 
 app.post("/events/new",function(req,res){
@@ -1318,6 +1388,23 @@ app.put("/events/confirmation/:eventid",function(req,res){
   var put = {
         confirmed_players: req.body.confirmedplayers,
         declined_players: req.body.declinedplayers
+    };
+    console.log(put);
+connection.query('UPDATE events SET ? WHERE event_ID = ?', [put, req.params.eventid], function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+
+app.put("/events/extraplayers/:eventid",function(req,res){
+  var put = {
+        extra_players: req.body.extraplayers
     };
     console.log(put);
 connection.query('UPDATE events SET ? WHERE event_ID = ?', [put, req.params.eventid], function(err,result) {
