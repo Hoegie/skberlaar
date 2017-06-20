@@ -1,4 +1,4 @@
-//VERSION 1,0,2
+//VERSION 1,0,3 SSL
 var express    = require('express');
 var mysql      = require('mysql');
 var bodyParser = require('body-parser');
@@ -9,6 +9,7 @@ var ejs = require('ejs');
 var fs = require('fs');
 var join = require('path').join;
 var http = require('http');
+var https = require('https');
 var path = require('path');
 var connection = mysql.createConnection({
   //host     : 'degronckel.synology.me', 
@@ -21,6 +22,7 @@ var connection = mysql.createConnection({
 var app = express();
 
   app.set('port', process.env.PORT || 3000);
+  app.set('porthttps', 3001);
   console.log(app.get('port'));
   app.use(bodyParser.urlencoded({ extended: false}));
   app.use(bodyParser.json());
@@ -1632,3 +1634,18 @@ connection.query('UPDATE results SET ? WHERE result_ID = ? ', [put, req.params.r
 http.createServer(app).listen(app.get('port'), function(){
   console.log("Express server listening on port " + app.get('port'));
 });
+
+
+https.createServer({
+            key: fs.readFileSync("/etc/letsencrypt/archive/appskberlaar.be/privkey1.pem"),
+            cert: fs.readFileSync("/etc/letsencrypt/archive/appskberlaar.be/fullchain1.pem"),
+            ca: fs.readFileSync("/etc/letsencrypt/archive/appskberlaar.be/chain1.pem")
+     }, app).listen(app.get('porthttps'), function(){
+  console.log("Express SSL server listening on port " + app.get('porthttps'));
+});
+
+
+
+
+
+
