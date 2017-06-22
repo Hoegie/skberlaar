@@ -957,6 +957,18 @@ connection.query('SELECT players.*, COALESCE(teams.team_name, "No Team") as team
   });
 });
 
+app.get("/players/php/all",function(req,res){
+connection.query('SELECT players.player_ID, players.first_name, players.last_name, players.street, players.street_nr, players.postal_code, players.town, COALESCE(teams.team_name, "No Team") as teamName FROM players LEFT JOIN teams ON players.teamID = teams.team_ID ORDER BY LPAD(lower(teamName), 10,0) ASC, players.last_name ASC', function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
 app.get("/players/playerid/:playerid",function(req,res){
 connection.query('SELECT players.*, CONVERT(DATE_FORMAT(players.birth_date,"%d-%m-%Y"), CHAR(50)) as birth_date_string, CONVERT(DATE_FORMAT(players.membership_date,"%d-%m-%Y"), CHAR(50)) as membership_date_string, COALESCE(teams.team_name, "No Team") as team_name FROM players LEFT JOIN teams ON players.teamID = teams.team_ID WHERE players.player_ID = ?', req.params.playerid, function(err, rows, fields) {
 /*connection.end();*/
