@@ -1,4 +1,4 @@
-//VERSION 1,0,3 SSL
+//VERSION 1,0,4 SSL
 var express    = require('express');
 var mysql      = require('mysql');
 var bodyParser = require('body-parser');
@@ -829,6 +829,18 @@ connection.query('SELECT * FROM staff ORDER BY last_name ASC', function(err, row
   });
 });
 
+app.get("/staff/staffid/:staffid",function(req,res){
+connection.query('SELECT * FROM staff WHERE staff_ID = ?', req.params.staffid ,function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
 
 app.get("/staff/trainers",function(req,res){
 connection.query('SELECT * FROM staff WHERE title LIKE "T%" ORDER BY last_name DESC', function(err, rows, fields) {
@@ -1132,6 +1144,19 @@ connection.query('SELECT * FROM players_emails where playerID = ?', req.params.p
 });
 
 
+app.get("/playersemail/emailid/:emailid",function(req,res){
+connection.query('SELECT * FROM players_emails where email_ID = ?', req.params.emailid, function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+
 app.post("/playersemail/new",function(req,res){
   var post = {
         playerID: req.body.playerid,
@@ -1149,6 +1174,25 @@ connection.query('INSERT INTO players_emails SET ?', post, function(err,result) 
   }
   });
 });
+
+
+app.put("/playersemail/emailid/:emailid",function(req,res){
+  var put = {
+        email_address: req.body.emailaddress,
+        owner: req.body.owner
+    };
+    console.log(put);
+connection.query('UPDATE players_emails SET ? WHERE email_ID = ?', [put, req.params.emailid], function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
 
 app.delete("/playersemail/:emailid",function(req,res){
   var data = {
@@ -1179,6 +1223,17 @@ connection.query('SELECT * FROM players_gsms where playerID = ?', req.params.pla
   });
 });
 
+app.get("/playersgsm/gsmid/:gsmid",function(req,res){
+connection.query('SELECT * FROM players_gsms where gsm_ID = ?', req.params.gsmid, function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
 
 app.post("/playersgsm/new",function(req,res){
   var post = {
@@ -1197,6 +1252,24 @@ connection.query('INSERT INTO players_gsms SET ?', post, function(err,result) {
   }
   });
 });
+
+app.put("/playersgsm/gsmid/:gsmid",function(req,res){
+  var put = {
+        gsm_number: req.body.gsmnumber,
+        owner: req.body.owner
+    };
+    console.log(put);
+connection.query('UPDATE players_gsms SET ? WHERE gsm_ID = ?', [put, req.params.gsmid], function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
 
 app.delete("/playersgsm/:gsmid",function(req,res){
   var data = {
