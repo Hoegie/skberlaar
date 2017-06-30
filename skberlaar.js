@@ -523,6 +523,17 @@ connection.query('SELECT CONVERT(accounts.account_ID,CHAR(50)) AS accountID, acc
   });
 });
 
+app.get("/accounts/count",function(req,res){
+connection.query('SELECT COUNT(*) as number from accounts', function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
 
 app.post("/accounts/new",function(req,res){
   var post = {
@@ -727,6 +738,18 @@ connection.query(connquery, req.params.favorites, function(err, rows, fields) {
   });
 });
 
+app.get("/teams/count",function(req,res){
+connection.query('SELECT COUNT(*) as number from teams', function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
 app.post("/teams/new",function(req,res){
   var post = {
         team_name: req.body.teamname,
@@ -870,6 +893,18 @@ connection.query('SELECT * FROM staff WHERE title LIKE "D%" ORDER BY last_name A
 
 app.get("/staff/coordinators",function(req,res){
 connection.query('SELECT * FROM staff WHERE title LIKE "C%" ORDER BY last_name ASC', function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+app.get("/staff/count",function(req,res){
+connection.query('SELECT COUNT(*) as number from staff', function(err, rows, fields) {
 /*connection.end();*/
   if (!err){
     console.log('The solution is: ', rows);
@@ -1050,6 +1085,17 @@ connection.query('SELECT confirmed_players FROM events where event_ID = ?', req.
   });
 });
 
+app.get("/players/count",function(req,res){
+connection.query('SELECT COUNT(*) as number from players', function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
 
 app.post("/players/new",function(req,res){
   var post = {
