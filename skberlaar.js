@@ -701,7 +701,7 @@ connection.query('SELECT team_ID, team_name, team_series, team_division FROM tea
 
 
 app.get("/teams/info/:teamid",function(req,res){
-connection.query('SELECT teams.team_name, staff.staff_ID, staff.first_name, staff.last_name, staff.title, staff.email_address, staff.gsm, staff.pic_url FROM teams JOIN staff ON teams.T1_ID = staff.staff_ID OR teams.D1_ID = staff.staff_ID OR teams.T2_ID = staff.staff_ID OR teams.D2_ID = staff.staff_ID or teams.Co_ID = staff.staff_ID where teams.team_ID = ?', req.params.teamid, function(err, rows, fields) {
+connection.query('SELECT teams.team_name, teams.team_division, teams.team_series, staff.staff_ID, staff.first_name, staff.last_name, staff.title, staff.email_address, staff.gsm, staff.pic_url FROM teams JOIN staff ON teams.T1_ID = staff.staff_ID OR teams.D1_ID = staff.staff_ID OR teams.T2_ID = staff.staff_ID OR teams.D2_ID = staff.staff_ID or teams.Co_ID = staff.staff_ID where teams.team_ID = ?', req.params.teamid, function(err, rows, fields) {
 /*connection.end();*/
   if (!err){
     console.log('The solution is: ', rows);
