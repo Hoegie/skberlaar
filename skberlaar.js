@@ -488,6 +488,20 @@ connection.query('UPDATE tokens SET ? WHERE accountID = ? and device_ID = ?',[pu
 });
 
 
+/*APP SETTINGS*/
+
+app.get("/settings",function(req,res){
+connection.query("SELECT *, CONVERT(DATE_FORMAT(notifDate,'%d-%m-%Y %H:%i'), CHAR(50)) as notifDateString from settings", function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
 /*ACCOUNTS*/
 
 
