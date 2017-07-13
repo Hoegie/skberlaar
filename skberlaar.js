@@ -46,7 +46,7 @@ var apnProvider = new apn.Provider({
           keyId: 'AW53VE2WG7', // The Key ID of the p8 file (available at https://developer.apple.com/account/ios/certificate/key)
           teamId: '857J4HYVDU', // The Team ID of your Apple Developer Account (available at https://developer.apple.com/account/#/membership/)
       },
-      production: false // Set to true if sending a notification to a production iOS app
+      production: true // Set to true if sending a notification to a production iOS app
   });  
 
 var notification = new apn.Notification();
@@ -496,6 +496,27 @@ connection.query("SELECT *, CONVERT(DATE_FORMAT(notifDate,'%d-%m-%Y %H:%i'), CHA
   if (!err){
     console.log('The solution is: ', rows);
     res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+
+app.put("/settings",function(req,res){
+  var put = {
+        showOutfit: req.body.showoutfit,
+        outfitUrl: req.body.outfiturl,
+        showNotif: req.body.shownotif,
+        notifText: req.body.notiftext
+    };
+    console.log(put);
+
+connection.query("UPDATE settings SET notifDate = STR_TO_DATE('" + req.body.notifdate + "', '%d-%m-%Y %H:%i'), ? WHERE settings_ID = 0", put, function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
   }else{
     console.log('Error while performing Query.');
   }
