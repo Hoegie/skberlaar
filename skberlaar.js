@@ -758,6 +758,19 @@ connection.query('SELECT teams.team_name, teams.team_division, teams.team_series
   });
 });
 
+app.get("/teams/teaminfo/:teamid",function(req,res){
+connection.query('SELECT team_name, team_division, team_series FROM teams WHERE team_ID = ?', req.params.teamid, function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+
 app.get("/teams/favorites/:favorites",function(req,res){
   console.log(req.params.favorites);
   var connquery = "SELECT team_name, team_ID FROM teams WHERE team_ID IN " + req.params.favorites + " ORDER BY LPAD(lower(team_name), 10,0) ASC" ;
