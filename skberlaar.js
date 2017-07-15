@@ -331,6 +331,25 @@ connection.query("SELECT events.teamID, events.event_type, events.match_type, ev
                   scores: scoresarray
                   });
 
+                  var dt = dateTime.create();
+                  var formatted = dt.format('d_m_Y_H_M_S');
+
+                  //var fileName = 'gamereports/' + teamnameDB + '_' + formatted + '.html';
+                  
+                  var fileName = '/app/nodeprojects/github/skberlaar/gamereports/' + teamnameDB + '_' + formatted + '.html';   
+
+                  fileName = fileName.replace(" ", "_"); 
+
+
+                  fs.writeFile(fileName, htmloutput, function(err){
+                      if (err){
+                          console.log(err);
+                      } else {
+                        console.log("The file was saved");
+                      }
+
+                  });  
+
                   var mailOptions = {
                     from: 'skberlaar.app@gmail.com',
                     to: 'sven.degronckel@skynet.be',
