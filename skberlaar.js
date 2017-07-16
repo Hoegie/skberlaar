@@ -337,7 +337,7 @@ connection.query("SELECT events.teamID, events.event_type, events.match_type, ev
 
                   //var fileName = 'gamereports/' + teamnameDB + '_' + formatted + '.html';
                   
-                  var fileName = '/app/nodeprojects/github/skberlaar/gamereports/' + teamnameDB + '_' + formatted + '.html';   
+                  var fileName = '/var/www/html/gamereports/' + teamnameDB + '_' + formatted + '.html';   
 
                   fileName = fileName.replace(" ", "_"); 
 
