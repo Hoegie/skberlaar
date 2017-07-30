@@ -353,7 +353,7 @@ connection.query("SELECT events.teamID, events.event_type, events.match_type, ev
 
                   var mailOptions = {
                     from: 'skberlaar.app@gmail.com',
-                    to: 'sven.degronckel@skynet.be',
+                    to: 'jan.verbinnen@skynet.be',
                     cc: ccEmailAddressArray,
                     subject: 'Wedstrijd verslag' + ' ' + teamnameDB,
                     text: '',
