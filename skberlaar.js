@@ -1661,6 +1661,22 @@ connection.query('UPDATE events SET ? WHERE event_ID = ?', [put, req.params.even
   });
 });
 
+app.put("/events/dressingroom/:eventid",function(req,res){
+  var put = {
+        dressing_room: req.body.dressingroom
+    };
+    console.log(put);
+connection.query('UPDATE events SET ? WHERE event_ID = ?', [put, req.params.eventid], function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
 app.delete("/events/:eventid",function(req,res){
   var data = {
         eventid: req.params.eventid
