@@ -1283,6 +1283,17 @@ connection.query('SELECT * FROM players_emails where email_ID = ?', req.params.e
   });
 });
 
+app.get("/playersemail/teamid/:teamid",function(req,res){
+connection.query('SELECT players_emails.email_address FROM players LEFT JOIN players_emails ON players.player_ID = players_emails.playerID WHERE players.teamID = ? AND players_emails.email_address is not null', req.params.teamid, function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
 
 app.post("/playersemail/new",function(req,res){
   var post = {
