@@ -1565,6 +1565,53 @@ connection.query('SELECT player_ID, first_name, last_name, pic_url FROM players 
   });
 });
 
+app.post("/events/trainingrepeat/new",function(req,res){
+  var post = {
+        teamID: req.body.teamid,
+        event_type: req.body.eventtype,
+        date: req.body.date,
+        match_type: req.body.matchtype,
+        opponentID: req.body.opponentid,
+        locationID: req.body.locationid,
+        comments: req.body.comments
+    };
+    console.log(post);
+    var daysArray  = req.body.daysarray;
+    console.log("daysarray : ")
+    console.log(daysArray);
+    var startDate = moment(req.body.date, "DD-MM-YYYY HH:mm");
+    var endDate = moment(req.body.enddate, "DD-MM-YYYY HH:mm");
+
+    while (startDate.isSameOrBefore(endDate)) {
+
+      if (daysArray.includes(startDate.format("dddd"))){
+        var trainingDateString = startDate.format("DD-MM-YYYY HH:mm").toString();
+        console.log(trainingDateString);  
+
+        var connquery = "INSERT INTO events SET date = STR_TO_DATE('" + trainingDateString + "','%d-%m-%Y  %H:%i'), teamID = '" + post.teamID + "', event_type = '" + post.event_type + "', match_type = '" + post.match_type + "', opponentID = '" + post.opponentID + "', locationID = '" + post.locationID + "', comments = '" + post.comments + "'";
+        console.log(connquery);
+        connection.query(connquery, post, function(err,result) {
+    
+        if (!err){
+          console.log(result);
+          var testDate = startDate;
+          testDate.add(1, 'days');
+          if (!testDate.isSameOrBefore(endDate)){
+            res.end(JSON.stringify(result));
+          }
+          
+        }else{
+          console.log('Error while performing Query.');
+        }
+        });
+
+      }
+
+    startDate.add(1, 'days');
+
+    }
+
+});
 
 
 app.post("/events/new",function(req,res){
