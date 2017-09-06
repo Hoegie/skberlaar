@@ -80,8 +80,60 @@ app.get("/skberlaar/iospush/:teamid",function(req,res){
  });
 });
 
+app.get("/skberlaar/iospushnew/:teamid/:body",function(req,res){
+  var teamID = req.params.teamid;
+  var body = req.params.body;
+  console.log(body);
+  var notification2 = new apn.Notification();
+  notification2.topic = 'be.degronckel.skBerlaar';
+  notification2.expiry = Math.floor(Date.now() / 1000) + 3600;
+  notification2.sound = 'ping.aiff';
+  notification2.title = 'Afgelasting !';
+  notification2.body = body;
+  console.log("iospush2 gehit !!");
+  console.log(teamID);
+  var connquery = "SELECT tokens.accountID, tokens.token FROM tokens LEFT JOIN accounts ON tokens.accountID = accounts.account_ID WHERE accounts.favorites REGEXP '[[:<:]]" + teamID + "[[:>:]]' AND tokens.send = 1 AND tokens.device_type = 'Apple'";
+  connection.query(connquery, function(err, rows, fields) {
+    if (!err){
+      res.end(JSON.stringify(rows));
+      console.log(rows)
+      rows.forEach(function(row, i) {
+          apnProvider.send(notification2, row.token).then(function(result) { 
+            console.log(result);
+          });
+      });
+    }else{
+      console.log('Error while performing Query.');
+    }
+ });
+});
 
-
+app.get("/skberlaar/ioslivepush/:teamid/:title/:body",function(req,res){
+  var teamID = req.params.teamid;
+  var body = req.params.body;
+  var title = req.params.title;
+  var notification3 = new apn.Notification();
+  notification3.topic = 'be.degronckel.skBerlaar';
+  notification3.expiry = Math.floor(Date.now() / 1000) + 3600;
+  notification3.sound = 'ping.aiff';
+  notification3.title = title;
+  notification3.body = body;
+  console.log("ioslivepush gehit !!");
+  var connquery = "SELECT tokens.accountID, tokens.token FROM tokens LEFT JOIN accounts ON tokens.accountID = accounts.account_ID WHERE accounts.favorites REGEXP '[[:<:]]" + teamID + "[[:>:]]' AND tokens.send = 1 AND tokens.device_type = 'Apple' AND tokens.send_livemode = 1";
+  connection.query(connquery, function(err, rows, fields) {
+    if (!err){
+      res.end(JSON.stringify(rows));
+      console.log(rows)
+      rows.forEach(function(row, i) {
+          apnProvider.send(notification3, row.token).then(function(result) { 
+            console.log(result);
+          });
+      });
+    }else{
+      console.log('Error while performing Query.');
+    }
+ });
+});
 
 /*ANDROID push message setup*/
 
@@ -120,8 +172,68 @@ var teamID = req.params.teamid;
  });
 });
 
+app.get("/skberlaar/androidpushnew/:teamid/:body",function(req,res){
+var teamID = req.params.teamid;
+var body = req.params.body;
+console.log("Android push 2 gehit !!");
+var alarmMessage2 = new gcm.Message();
+alarmMessage2.addNotification({
+  title: 'Afgelasting !',
+  body: body,
+  icon: 'skberlaarlogo',
+  sound: 'true'
+});
+  console.log(teamID);
+  var connquery = "SELECT tokens.accountID, tokens.token FROM tokens LEFT JOIN accounts ON tokens.accountID = accounts.account_ID WHERE accounts.favorites REGEXP '[[:<:]]" + teamID + "[[:>:]]' AND tokens.send = 1 AND tokens.device_type = 'Android'";
+  connection.query(connquery, function(err, rows, fields) {
+    if (!err){
+      res.end(JSON.stringify(rows));
+      console.log(rows)
+      rows.forEach(function(row, i) {
+          sender.sendNoRetry(alarmMessage2, { to : row.token }, function(err, response) {
+        if(err) console.error(err);
+        else {
+          console.log(JSON.stringify(response));
+        }
+      });
+      });
+    }else{
+      console.log('Error while performing Query.');
+    }
+ });
+});
 
 
+app.get("/skberlaar/androidlivepush/:teamid/:title/:body",function(req,res){
+var teamID = req.params.teamid;
+var body = req.params.body;
+var title = req.params.title;
+var alarmMessage3 = new gcm.Message();
+alarmMessage3.addNotification({
+  title: title,
+  body: body,
+  icon: 'skberlaarlogo',
+  sound: 'true'
+});
+  console.log(teamID);
+  var connquery = "SELECT tokens.accountID, tokens.token FROM tokens LEFT JOIN accounts ON tokens.accountID = accounts.account_ID WHERE accounts.favorites REGEXP '[[:<:]]" + teamID + "[[:>:]]' AND tokens.send = 1 AND tokens.device_type = 'Android' AND tokens.send_livemode = 1";
+  connection.query(connquery, function(err, rows, fields) {
+    if (!err){
+      res.end(JSON.stringify(rows));
+      console.log(rows)
+      rows.forEach(function(row, i) {
+          sender.sendNoRetry(alarmMessage3, { to : row.token }, function(err, response) {
+        if(err) console.error(err);
+        else {
+          console.log(JSON.stringify(response));
+        }
+      });
+      });
+    }else{
+      console.log('Error while performing Query.');
+    }
+ });
+});
 
 /*Email handling*/
 
@@ -223,7 +335,8 @@ connection.query("SELECT events.teamID, events.event_type, events.match_type, ev
 
   if (!err){
     var teamID = rows[0].teamID;
-    var confirms = "(" + rows[0].confirmed_players + ")";
+    var confirms = "(" + rows[0].confirmed_players + ",10001" + ",10000" +")";
+    var confirms1 = "(" + rows[0].confirmed_players + ")";
     var eventTypeDB = rows[0].event_type;
     var eventDateDB = rows[0].event_date;
     var eventTimeDB = rows[0].event_time;
@@ -243,7 +356,7 @@ connection.query("SELECT events.teamID, events.event_type, events.match_type, ev
         awayteamDB = 'SK BERLAAR';
     }
     /*teaminfoquery*/
-    connection.query('SELECT teams.team_name, teams.team_division, teams.team_series, trainer.first_name as trainer_first_name, trainer.last_name as trainer_last_name, trainer.email_address as trainer_email_address, delegee.first_name as delegee_first_name, delegee.last_name as delegee_last_name, delegee.email_address as delegee_email_address FROM teams LEFT JOIN staff as trainer ON T1_ID = trainer.staff_ID LEFT JOIN staff AS delegee ON D1_ID = delegee.staff_ID WHERE team_ID = ?', teamID, function(err, rows, fields) {
+    connection.query('SELECT teams.team_name, teams.team_division, teams.team_series, trainer.first_name as trainer_first_name, trainer.last_name as trainer_last_name, trainer.email_address as trainer_email_address, delegee.first_name as delegee_first_name, delegee.last_name as delegee_last_name, delegee.email_address as delegee_email_address, COALESCE(trainer2.email_address, "none") as trainer2_email_address, COALESCE(delegee2.email_address, "none") as delegee2_email_address FROM teams LEFT JOIN staff as trainer ON T1_ID = trainer.staff_ID LEFT JOIN staff AS trainer2 ON T2_ID = trainer2.staff_ID LEFT JOIN staff AS delegee ON D1_ID = delegee.staff_ID LEFT JOIN staff AS delegee2 ON D2_ID = delegee2.staff_ID WHERE team_ID = ?', teamID, function(err, rows, fields) {
        
        if (!err){
           var teamnameDB = rows[0].team_name;
@@ -255,12 +368,17 @@ connection.query("SELECT events.teamID, events.event_type, events.match_type, ev
           ccEmailAddressArray.push(rows[0].trainer_email_address);
           ccEmailAddressArray.push(rows[0].delegee_email_address);
 
+          if (rows[0].trainer2_email_address != 'none') {ccEmailAddressArray.push(rows[0].trainer2_email_address);}
+          if (rows[0].delegee2_email_address != 'none') {ccEmailAddressArray.push(rows[0].delegee2_email_address);}
+
+
           /*playersquery*/  
-          var connquery = "SELECT players.first_name as firstname, players.last_name as lastname, COALESCE((SELECT goals.goals from goals WHERE goals.playerid = players.player_ID AND goals.eventID = " + eventID + "), 0) as goals FROM players where players.player_ID IN " + confirms;
+          var connquery = "SELECT players.first_name as firstname, players.last_name as lastname, COALESCE((SELECT goals.goals from goals WHERE goals.playerid = players.player_ID AND goals.eventID = " + eventID + "), 0) as goals FROM players where players.player_ID IN " + confirms1;
           connection.query(connquery, function(err, rows, fields) {
 
             if (!err){
               var players = rows;
+
 
               /*scoresquery*/
               var connquery2 = "SELECT players.first_name, players.last_name, COALESCE((SELECT goals.goals from goals WHERE goals.playerid = players.player_ID AND goals.eventID = " + eventID + "), 0) as goals, COALESCE((SELECT goals.timestamps from goals WHERE goals.playerid = players.player_ID AND goals.eventID = " + eventID + "), 'none') as timestamps FROM players where players.player_ID IN " + confirms + " AND COALESCE((SELECT goals.goals from goals WHERE goals.playerid = players.player_ID AND goals.eventID = " + eventID + "), 0) <> '0'"
@@ -333,12 +451,13 @@ connection.query("SELECT events.teamID, events.event_type, events.match_type, ev
                   scores: scoresarray
                   });
 
+
                   var dt = dateTime.create();
                   var formatted = dt.format('d_m_Y_H_M_S');
 
                   //var fileName = 'gamereports/' + teamnameDB + '_' + formatted + '.html';
                   
-                  var fileName = '/var/www/html/gamereports/' + teamnameDB + '_' + formatted + '.html';   
+                  var fileName = '/Applications/MAMP/htdocs/skberlaar/gamereports/' + teamnameDB + '_' + formatted + '.html';   
 
                   fileName = fileName.replace(" ", "_"); 
 
@@ -354,11 +473,16 @@ connection.query("SELECT events.teamID, events.event_type, events.match_type, ev
 
                   var mailOptions = {
                     from: 'skberlaar.app@gmail.com',
-                    to: 'jan.verbinnen@skynet.be',
+                    to: 'sven.degronckel@skynet.be',
                     cc: ccEmailAddressArray,
                     subject: 'Wedstrijd verslag' + ' ' + teamnameDB,
-                    text: '',
-                    html: htmloutput
+                    text: 'Het wedstrijdverslag vind je in attach.',
+                    //html: htmloutput,
+                    attachments: [
+                      {path: fileName
+
+                      }
+                    ]
                   };
                   transporter.sendMail(mailOptions, function(error, info){
                       if(error){
@@ -1062,7 +1186,7 @@ connection.query('DELETE FROM staff WHERE staff_ID = ?', data.staffid, function(
 /*PLAYERS*/
 
 app.get("/players/all",function(req,res){
-connection.query('SELECT players.*, COALESCE(teams.team_name, "Geen Team") as teamName FROM players LEFT JOIN teams ON players.teamID = teams.team_ID ORDER BY LPAD(lower(teamName), 10,0) ASC, players.last_name ASC', function(err, rows, fields) {
+connection.query('SELECT players.*, COALESCE(teams.team_name, "Geen Team") as teamName FROM players LEFT JOIN teams ON players.teamID = teams.team_ID WHERE players.player_ID < 10000 ORDER BY LPAD(lower(teamName), 10,0) ASC, players.last_name ASC', function(err, rows, fields) {
 /*connection.end();*/
   if (!err){
     console.log('The solution is: ', rows);
@@ -1074,7 +1198,7 @@ connection.query('SELECT players.*, COALESCE(teams.team_name, "Geen Team") as te
 });
 
 app.get("/players/php/all",function(req,res){
-connection.query('SELECT players.player_ID, players.first_name, players.last_name, players.street, players.street_nr, players.postal_code, players.town, COALESCE(teams.team_name, "Geen Team") as teamName FROM players LEFT JOIN teams ON players.teamID = teams.team_ID ORDER BY LPAD(lower(teamName), 10,0) ASC, players.last_name ASC', function(err, rows, fields) {
+connection.query('SELECT players.player_ID, players.first_name, players.last_name, players.street, players.street_nr, players.postal_code, players.town, COALESCE(teams.team_name, "Geen Team") as teamName FROM players LEFT JOIN teams ON players.teamID = teams.team_ID WHERE players.player_ID < 10000 ORDER BY LPAD(lower(teamName), 10,0) ASC, players.last_name ASC', function(err, rows, fields) {
 /*connection.end();*/
   if (!err){
     console.log('The solution is: ', rows);
@@ -1085,8 +1209,9 @@ connection.query('SELECT players.player_ID, players.first_name, players.last_nam
   });
 });
 
+
 app.get("/players/export/all",function(req,res){
-connection.query('SELECT players.first_name, players.last_name, CONVERT(DATE_FORMAT(players.birth_date,"%d-%m-%Y"), CHAR(50)) as birth_date_string, players.birth_place, players.street, players.street_nr, players.postal_code, players.town, CONVERT(DATE_FORMAT(players.membership_date,"%d-%m-%Y"), CHAR(50)) as membership_date_string, players.membership_nr FROM players ORDER BY players.birth_date', function(err, rows, fields) {
+connection.query('SELECT players.first_name, players.last_name, CONVERT(DATE_FORMAT(players.birth_date,"%d-%m-%Y"), CHAR(50)) as birth_date_string, players.birth_place, players.street, players.street_nr, players.postal_code, players.town, CONVERT(DATE_FORMAT(players.membership_date,"%d-%m-%Y"), CHAR(50)) as membership_date_string, players.membership_nr FROM players WHERE players.player_ID < 10000 ORDER BY players.birth_date', function(err, rows, fields) {
 /*connection.end();*/
   if (!err){
     console.log('The solution is: ', rows);
@@ -1125,7 +1250,7 @@ connection.query('SELECT player_ID, first_name, last_name, pic_url FROM players 
 
 
 app.get("/players/otherteam/teamid/:teamid",function(req,res){
-connection.query('SELECT player_ID, first_name, last_name, pic_url FROM players where teamID <> ? ORDER BY last_name', req.params.teamid, function(err, rows, fields) {
+connection.query('SELECT player_ID, first_name, last_name, pic_url FROM players where (teamID <> ?) AND (player_ID < 1000) ORDER BY last_name', req.params.teamid, function(err, rows, fields) {
 /*connection.end();*/
   if (!err){
     console.log('The solution is: ', rows);
@@ -1143,7 +1268,7 @@ connection.query('SELECT confirmed_players FROM events where event_ID = ?', req.
   if (!err){
     console.log('The solution is: ', rows);
     if (rows[0].confirmed_players != 'none'){
-      var confirms = '(' + rows[0].confirmed_players + ')';
+      var confirms = '(' + rows[0].confirmed_players + ',10001' + ')';
       console.log(confirms);
       var connquery = "SELECT players.player_ID, players.first_name, players.last_name, players.pic_url, CONVERT(COALESCE((SELECT goals.goals_ID from goals WHERE goals.playerid = players.player_ID AND goals.eventID = " + req.params.eventid + "), 'none'), CHAR(50)) as goals_ID, COALESCE((SELECT goals.goals from goals WHERE goals.playerid = players.player_ID AND goals.eventID = " + req.params.eventid + "), 0) as goals, COALESCE((SELECT goals.timestamps from goals WHERE goals.playerid = players.player_ID AND goals.eventID = " + req.params.eventid + "), 'none') as timestamps FROM players where players.player_ID IN " + confirms;
       console.log(connquery);
@@ -1825,6 +1950,18 @@ connection.query('UPDATE opponents SET ? WHERE opponent_ID = ? ', [put, req.para
 });
 
 /*GOALS*/
+
+app.get("/goals/opponent/:eventid",function(req,res){
+connection.query('SELECT goals_ID, goals, timestamps FROM goals WHERE (playerID = 10000) AND (eventID = ?)', req.params.eventid, function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
 
 app.post("/goals/new",function(req,res){
   var post = {
