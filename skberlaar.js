@@ -335,7 +335,7 @@ connection.query("SELECT events.teamID, events.event_type, events.match_type, ev
 
   if (!err){
     var teamID = rows[0].teamID;
-    var confirms = "(" + rows[0].confirmed_players + ",10001" + ",10000" +")";
+    var confirms = "(" + rows[0].confirmed_players + ",1" + ",2" +")";
     var confirms1 = "(" + rows[0].confirmed_players + ")";
     var eventTypeDB = rows[0].event_type;
     var eventDateDB = rows[0].event_date;
@@ -1186,7 +1186,7 @@ connection.query('DELETE FROM staff WHERE staff_ID = ?', data.staffid, function(
 /*PLAYERS*/
 
 app.get("/players/all",function(req,res){
-connection.query('SELECT players.*, COALESCE(teams.team_name, "Geen Team") as teamName FROM players LEFT JOIN teams ON players.teamID = teams.team_ID WHERE players.player_ID < 10000 ORDER BY LPAD(lower(teamName), 10,0) ASC, players.last_name ASC', function(err, rows, fields) {
+connection.query('SELECT players.*, COALESCE(teams.team_name, "Geen Team") as teamName FROM players LEFT JOIN teams ON players.teamID = teams.team_ID WHERE players.player_ID > 2 ORDER BY LPAD(lower(teamName), 10,0) ASC, players.last_name ASC', function(err, rows, fields) {
 /*connection.end();*/
   if (!err){
     console.log('The solution is: ', rows);
@@ -1198,7 +1198,7 @@ connection.query('SELECT players.*, COALESCE(teams.team_name, "Geen Team") as te
 });
 
 app.get("/players/php/all",function(req,res){
-connection.query('SELECT players.player_ID, players.first_name, players.last_name, players.street, players.street_nr, players.postal_code, players.town, COALESCE(teams.team_name, "Geen Team") as teamName FROM players LEFT JOIN teams ON players.teamID = teams.team_ID WHERE players.player_ID < 10000 ORDER BY LPAD(lower(teamName), 10,0) ASC, players.last_name ASC', function(err, rows, fields) {
+connection.query('SELECT players.player_ID, players.first_name, players.last_name, players.street, players.street_nr, players.postal_code, players.town, COALESCE(teams.team_name, "Geen Team") as teamName FROM players LEFT JOIN teams ON players.teamID = teams.team_ID WHERE players.player_ID > 2 ORDER BY LPAD(lower(teamName), 10,0) ASC, players.last_name ASC', function(err, rows, fields) {
 /*connection.end();*/
   if (!err){
     console.log('The solution is: ', rows);
@@ -1211,7 +1211,7 @@ connection.query('SELECT players.player_ID, players.first_name, players.last_nam
 
 
 app.get("/players/export/all",function(req,res){
-connection.query('SELECT players.first_name, players.last_name, CONVERT(DATE_FORMAT(players.birth_date,"%d-%m-%Y"), CHAR(50)) as birth_date_string, players.birth_place, players.street, players.street_nr, players.postal_code, players.town, CONVERT(DATE_FORMAT(players.membership_date,"%d-%m-%Y"), CHAR(50)) as membership_date_string, players.membership_nr FROM players WHERE players.player_ID < 10000 ORDER BY players.birth_date', function(err, rows, fields) {
+connection.query('SELECT players.first_name, players.last_name, CONVERT(DATE_FORMAT(players.birth_date,"%d-%m-%Y"), CHAR(50)) as birth_date_string, players.birth_place, players.street, players.street_nr, players.postal_code, players.town, CONVERT(DATE_FORMAT(players.membership_date,"%d-%m-%Y"), CHAR(50)) as membership_date_string, players.membership_nr FROM players WHERE players.player_ID > 2 ORDER BY players.birth_date', function(err, rows, fields) {
 /*connection.end();*/
   if (!err){
     console.log('The solution is: ', rows);
@@ -1237,7 +1237,7 @@ connection.query('SELECT players.*, CONVERT(DATE_FORMAT(players.birth_date,"%d-%
 
 
 app.get("/players/teamid/:teamid",function(req,res){
-connection.query('SELECT player_ID, first_name, last_name, pic_url FROM players where teamID = ?', req.params.teamid, function(err, rows, fields) {
+connection.query('SELECT player_ID, first_name, last_name, pic_url FROM players where teamID = ? ORDER BY last_name', req.params.teamid, function(err, rows, fields) {
 /*connection.end();*/
   if (!err){
     console.log('The solution is: ', rows);
@@ -1250,7 +1250,7 @@ connection.query('SELECT player_ID, first_name, last_name, pic_url FROM players 
 
 
 app.get("/players/otherteam/teamid/:teamid",function(req,res){
-connection.query('SELECT player_ID, first_name, last_name, pic_url FROM players where (teamID <> ?) AND (player_ID < 1000) ORDER BY last_name', req.params.teamid, function(err, rows, fields) {
+connection.query('SELECT player_ID, first_name, last_name, pic_url FROM players where (teamID <> ?) AND (player_ID > 2) ORDER BY last_name', req.params.teamid, function(err, rows, fields) {
 /*connection.end();*/
   if (!err){
     console.log('The solution is: ', rows);
@@ -1268,7 +1268,7 @@ connection.query('SELECT confirmed_players FROM events where event_ID = ?', req.
   if (!err){
     console.log('The solution is: ', rows);
     if (rows[0].confirmed_players != 'none'){
-      var confirms = '(' + rows[0].confirmed_players + ',10001' + ')';
+      var confirms = '(' + rows[0].confirmed_players + ',2' + ')';
       console.log(confirms);
       var connquery = "SELECT players.player_ID, players.first_name, players.last_name, players.pic_url, CONVERT(COALESCE((SELECT goals.goals_ID from goals WHERE goals.playerid = players.player_ID AND goals.eventID = " + req.params.eventid + "), 'none'), CHAR(50)) as goals_ID, COALESCE((SELECT goals.goals from goals WHERE goals.playerid = players.player_ID AND goals.eventID = " + req.params.eventid + "), 0) as goals, COALESCE((SELECT goals.timestamps from goals WHERE goals.playerid = players.player_ID AND goals.eventID = " + req.params.eventid + "), 'none') as timestamps FROM players where players.player_ID IN " + confirms;
       console.log(connquery);
@@ -1293,7 +1293,7 @@ connection.query('SELECT confirmed_players FROM events where event_ID = ?', req.
 });
 
 app.get("/players/count",function(req,res){
-connection.query('SELECT COUNT(*) as number from players', function(err, rows, fields) {
+connection.query('SELECT COUNT(*) as number from players WHERE player_ID > 2', function(err, rows, fields) {
 /*connection.end();*/
   if (!err){
     console.log('The solution is: ', rows);
@@ -1952,7 +1952,7 @@ connection.query('UPDATE opponents SET ? WHERE opponent_ID = ? ', [put, req.para
 /*GOALS*/
 
 app.get("/goals/opponent/:eventid",function(req,res){
-connection.query('SELECT goals_ID, goals, timestamps FROM goals WHERE (playerID = 10000) AND (eventID = ?)', req.params.eventid, function(err,result) {
+connection.query('SELECT goals_ID, goals, timestamps FROM goals WHERE (playerID = 1) AND (eventID = ?)', req.params.eventid, function(err,result) {
 /*connection.end();*/
   if (!err){
     console.log(result);
