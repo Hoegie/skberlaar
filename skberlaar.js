@@ -582,6 +582,22 @@ connection.query('SELECT send from tokens WHERE accountID = ? AND device_ID = ?'
   });
 });
 
+app.get("/apn/sendflags/:accountid/:deviceid",function(req,res){
+  var data = {
+        accountID: req.params.accountid,
+        deviceID: req.params.deviceid
+    };
+connection.query('SELECT send, send_anul, send_livemode from tokens WHERE accountID = ? AND device_ID = ?',[data.accountID, data.deviceID], function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
 app.post("/apn/new",function(req,res){
   var post = {
         accountID: req.body.accountID,
