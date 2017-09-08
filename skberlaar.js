@@ -632,6 +632,23 @@ connection.query('UPDATE tokens SET ? WHERE accountID = ? and device_ID = ?',[pu
   });
 });
 
+app.put("/apn/sendflags/:accountid/:deviceid",function(req,res){
+  var put = {
+        send: req.body.send,
+        send_anul: req.body.sendanul,
+        send_livemode: req.body.sendlivemode
+    };
+    console.log(put);
+connection.query('UPDATE tokens SET ? WHERE accountID = ? and device_ID = ?',[put, req.params.accountid, req.params.deviceid], function(err,result) {
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result.changedRows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
 
 /*APP SETTINGS*/
 
