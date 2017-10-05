@@ -135,6 +135,31 @@ app.get("/skberlaar/ioslivepush/:teamid/:title/:body",function(req,res){
  });
 });
 
+app.get("/skberlaar/iostestpush/:accountid",function(req,res){
+  var accountID = req.params.accountid;
+  var notification2 = new apn.Notification();
+  notification2.topic = 'be.degronckel.skBerlaar';
+  notification2.expiry = Math.floor(Date.now() / 1000) + 3600;
+  notification2.sound = 'ping.aiff';
+  notification2.title = 'Test';
+  notification2.body = 'Test bericht van sk Berlaar.  Bericht goed ontvangen ?  Stuur "ok" naar 0478959152 (Sven DG)';
+  console.log("iospush2 gehit !!");
+  console.log(accountID);
+  connection.query("SELECT token from tokens WHERE device_type = 'Apple' AND accountID = ?", req.params.accountid, function(err, rows, fields) {
+    if (!err){
+      res.end(JSON.stringify(rows));
+      console.log(rows)
+      rows.forEach(function(row, i) {
+          apnProvider.send(notification2, row.token).then(function(result) { 
+            console.log(result);
+          });
+      });
+    }else{
+      console.log('Error while performing Query.');
+    }
+ });
+});
+
 /*ANDROID push message setup*/
 
 var alarmMessage = new gcm.Message();
@@ -223,6 +248,34 @@ alarmMessage3.addNotification({
       console.log(rows)
       rows.forEach(function(row, i) {
           sender.sendNoRetry(alarmMessage3, { to : row.token }, function(err, response) {
+        if(err) console.error(err);
+        else {
+          console.log(JSON.stringify(response));
+        }
+      });
+      });
+    }else{
+      console.log('Error while performing Query.');
+    }
+ });
+});
+
+
+app.get("/skberlaar/androidtestpush/:accountid",function(req,res){
+var accountID = req.params.accountid;
+var alarmMessage2 = new gcm.Message();
+alarmMessage2.addNotification({
+  title: 'Afgelasting !',
+  body: 'Test bericht van sk Berlaar.  Bericht goed ontvangen ?  Stuur "ok" naar 0478959152 (Sven DG)',
+  icon: 'skberlaarlogfinal',
+  sound: 'true'
+});
+  connection.query("SELECT token from tokens WHERE device_type = 'Android' AND accountID = ?", req.params.accountid, function(err, rows, fields) {
+    if (!err){
+      res.end(JSON.stringify(rows));
+      console.log(rows)
+      rows.forEach(function(row, i) {
+          sender.sendNoRetry(alarmMessage2, { to : row.token }, function(err, response) {
         if(err) console.error(err);
         else {
           console.log(JSON.stringify(response));
@@ -2116,9 +2169,9 @@ http.createServer(app).listen(app.get('port'), function(){
 
 
 https.createServer({
-            key: fs.readFileSync("/etc/letsencrypt/archive/appskberlaar.be/privkey1.pem"),
-            cert: fs.readFileSync("/etc/letsencrypt/archive/appskberlaar.be/fullchain1.pem"),
-            ca: fs.readFileSync("/etc/letsencrypt/archive/appskberlaar.be/chain1.pem")
+            key: fs.readFileSync("/etc/letsencrypt/live/appskberlaar.be/privkey.pem"),
+            cert: fs.readFileSync("/etc/letsencrypt/live/appskberlaar.be/fullchain.pem"),
+            ca: fs.readFileSync("/etc/letsencrypt/live/appskberlaar.be/chain.pem")
      }, app).listen(app.get('porthttps'), function(){
   console.log("Express SSL server listening on port " + app.get('porthttps'));
 });
