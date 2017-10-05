@@ -263,10 +263,10 @@ alarmMessage3.addNotification({
 
 app.get("/skberlaar/androidtestpush/:accountid",function(req,res){
 var accountID = req.params.accountid;
-var alarmMessage2 = new gcm.Message();
-alarmMessage2.addNotification({
-  title: 'Afgelasting !',
-  body: 'Test bericht van sk Berlaar.  Bericht goed ontvangen ?  Stuur "ok" naar 0478959152 (Sven DG)',
+var alarmMessage3 = new gcm.Message();
+alarmMessage3.addNotification({
+  title: 'Test !',
+  body: 'Test bericht van sk Berlaar',
   icon: 'skberlaarlogfinal',
   sound: 'true'
 });
@@ -275,7 +275,7 @@ alarmMessage2.addNotification({
       res.end(JSON.stringify(rows));
       console.log(rows)
       rows.forEach(function(row, i) {
-          sender.sendNoRetry(alarmMessage2, { to : row.token }, function(err, response) {
+          sender.sendNoRetry(alarmMessage3, { to : row.token }, function(err, response) {
         if(err) console.error(err);
         else {
           console.log(JSON.stringify(response));
