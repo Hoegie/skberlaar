@@ -267,7 +267,7 @@ var alarmMessage3 = new gcm.Message();
 alarmMessage3.addNotification({
   title: 'Test !',
   body: 'Test bericht van sk Berlaar',
-  icon: 'skberlaarlogfinal',
+  icon: 'skberlaarlogo',
   sound: 'true'
 });
   connection.query("SELECT token from tokens WHERE device_type = 'Android' AND accountID = ?", req.params.accountid, function(err, rows, fields) {
