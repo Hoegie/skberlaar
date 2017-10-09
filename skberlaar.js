@@ -166,7 +166,7 @@ var alarmMessage = new gcm.Message();
 alarmMessage.addNotification({
   title: 'SK Berlaar',
   body: 'afgelasting',
-  icon: 'skberlaarlogo',
+  icon: 'skberlaarlogofinal',
   sound: 'true'
 });
 
@@ -205,7 +205,7 @@ var alarmMessage2 = new gcm.Message();
 alarmMessage2.addNotification({
   title: 'Afgelasting !',
   body: body,
-  icon: 'skberlaarlogo',
+  icon: 'skberlaarlogofinal',
   sound: 'true'
 });
   console.log(teamID);
@@ -237,7 +237,7 @@ var alarmMessage3 = new gcm.Message();
 alarmMessage3.addNotification({
   title: title,
   body: body,
-  icon: 'skberlaarlogo',
+  icon: 'skberlaarlogofinal',
   sound: 'true'
 });
   console.log(teamID);
@@ -2161,6 +2161,315 @@ connection.query('UPDATE results SET ? WHERE result_ID = ? ', [put, req.params.r
   }
   });
 });
+
+
+/*TOURNAMENTEVENTS*/
+
+app.get("/tournamentevents/:eventid",function(req,res){
+  console.log("gehit !!!!");
+  console.log(req.params.eventid);
+connection.query("SELECT tournamentevents.tournamentevent_ID, tournamentevents.eventID, tournamentevents.match_type, CONVERT(DATE_FORMAT(tournamentevents.date,'%d-%m-%Y'), CHAR(50)) as tournamentevent_date, CONVERT(DATE_FORMAT(tournamentevents.date,'%H:%i'), CHAR(50)) as tournamentevent_time, COALESCE(tournamentresults.homegoals, 1000) as homegoals, COALESCE(tournamentresults.awaygoals, 1000) as awaygoals, CONVERT(COALESCE(tournamentresults.tournamentresult_ID, 'none'), CHAR(50)) as tournamentresultID, CONVERT(COALESCE(opponentteam.prefix, 'none'), CHAR(50)) as opponent_prefix, CONVERT(COALESCE(opponentteam.name, 'none'), CHAR(50)) as opponent_name,  tournamentevents.comments, tournamentevents.dressing_room, tournamentevents.referee FROM tournamentevents LEFT JOIN tournamentresults ON tournamentevents.tournamentevent_ID = tournamentresults.tournamenteventID LEFT JOIN opponents AS opponentteam ON tournamentevents.opponentID = opponentteam.opponent_ID  WHERE tournamentevents.eventID = ? ORDER BY tournamentevents.date ASC", req.params.eventid, function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+
+app.get("/tournamentevents/confirmedplayers/:teventid",function(req,res){
+connection.query('SELECT confirmed_players, declined_players, extra_players FROM tournamentevents WHERE tournamentevent_ID = ?', req.params.teventid, function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+
+app.get("/confirmedplayers/tournamenteventid/:teventid",function(req,res){
+connection.query('SELECT confirmed_players FROM tournamentevents where tournamentevent_ID = ?', req.params.teventid, function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    if (rows[0].confirmed_players != 'none'){
+      var confirms = '(' + rows[0].confirmed_players + ',2' + ')';
+      console.log(confirms);
+      var connquery = "SELECT players.player_ID, players.first_name, players.last_name, players.pic_url, CONVERT(COALESCE((SELECT tournamentgoals.tournamentgoals_ID from tournamentgoals WHERE tournamentgoals.playerid = players.player_ID AND tournamentgoals.tournamenteventID = " + req.params.teventid + "), 'none'), CHAR(50)) as tournamentgoals_ID, COALESCE((SELECT tournamentgoals.goals from tournamentgoals WHERE tournamentgoals.playerid = players.player_ID AND tournamentgoals.tournamenteventID = " + req.params.teventid + "), 0) as tournamentgoals, COALESCE((SELECT tournamentgoals.timestamps from tournamentgoals WHERE tournamentgoals.playerid = players.player_ID AND tournamentgoals.tournamenteventID = " + req.params.teventid + "), 'none') as timestamps FROM players where players.player_ID IN " + confirms + " GROUP BY players.last_name ORDER BY CASE WHEN players.player_ID = 2 THEN 1 ELSE 0 END, players.last_name";
+      console.log(connquery);
+      connection.query(connquery, confirms, function(err, rows, fields) {
+      /*connection.end();*/
+       if (!err){
+       console.log('The solution is: ', rows);
+       console.log(confirms);
+        res.end(JSON.stringify(rows));
+        }else{
+          console.log('Error while performing Query.');
+        }
+      }); 
+    } else {
+      var emptyArray = [];
+      res.end(JSON.stringify(emptyArray));
+    }
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+app.get("/tournamentevents/extraplayers/:teventid",function(req,res){
+  connection.query('SELECT extra_players FROM tournamentevents WHERE tournamentevent_ID = ?', req.params.teventid, function(err, rows, fields) {
+      if (!err){
+      console.log('The solution is: ', rows);
+        var extras = '(' + rows[0].extra_players + ')';
+        console.log(extras);
+        var connquery = "SELECT player_ID, first_name, last_name, pic_url FROM players where player_ID IN " + extras;  
+        connection.query(connquery, function(err, rows, fields) {
+          if (!err){
+            console.log('The solution is: ', rows);
+            res.end(JSON.stringify(rows));
+          }else{
+            console.log('Error while performing Query.');
+          }
+        });
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+app.post("/tournamentevents/new",function(req,res){
+  var post = {
+        eventID: req.body.eventid,
+        teamID: req.body.teamid,
+        date: req.body.date,
+        match_type: req.body.matchtype,
+        opponentID: req.body.opponentid,
+        locationID: req.body.locationid
+    };
+    console.log(post);
+    var connquery = "INSERT INTO tournamentevents SET eventID = '" + post.eventID + "', locationID = '" + post.locationID + "', date = STR_TO_DATE('" + post.date + "','%d-%m-%Y  %H:%i'), teamID = '" + post.teamID + "', match_type = '" + post.match_type + "', opponentID = '" + post.opponentID + "'";
+    console.log(connquery);
+connection.query(connquery, post, function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+app.put("/tournamentevents/confirmation/:teventid",function(req,res){
+  var put = {
+        confirmed_players: req.body.confirmedplayers,
+        declined_players: req.body.declinedplayers
+    };
+    console.log(put);
+connection.query('UPDATE tournamentevents SET ? WHERE tournamentevent_ID = ?', [put, req.params.teventid], function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+
+app.put("/tournamentevents/extraplayers/:teventid",function(req,res){
+  var put = {
+        extra_players: req.body.extraplayers
+    };
+    console.log(put);
+connection.query('UPDATE tournamentevents SET ? WHERE tournamentevent_ID = ?', [put, req.params.teventid], function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+
+app.put("/tournamentevents/eventdate/:teventid",function(req,res){
+  connection.query("UPDATE tournamentevents SET date = STR_TO_DATE('" + req.body.date + "', '%d-%m-%Y  %H:%i') WHERE tournamentevent_ID = ?", req.params.teventid, function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+
+app.put("/tournamentevents/comments/:teventid",function(req,res){
+  var put = {
+        comments: req.body.comments
+    };
+    console.log(put);
+connection.query('UPDATE tournamentevents SET ? WHERE tournamentevent_ID = ?', [put, req.params.teventid], function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+app.put("/tournamentevents/referee/:teventid",function(req,res){
+  var put = {
+        referee: req.body.referee
+    };
+    console.log(put);
+connection.query('UPDATE tournamentevents SET ? WHERE tournamentevent_ID = ?', [put, req.params.teventid], function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+app.delete("/tournamentevents/:teventid",function(req,res){
+  var data = {
+        teventid: req.params.teventid
+    };
+    console.log(data.id);
+connection.query('DELETE FROM tournamentevents WHERE tournamentevent_ID = ?', data.teventid, function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+
+/*TOURNAMENTRESULTS*/
+
+app.post("/tournamentresults/new",function(req,res){
+  var post = {
+        tournamenteventID: req.body.tournamenteventid,
+        homegoals: req.body.homegoals,
+        awaygoals: req.body.awaygoals
+    };
+    console.log(post);
+connection.query('INSERT INTO tournamentresults SET ?', post, function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+
+app.put("/tournamentresults/resultid/:resultid",function(req,res){
+  var put = {
+        homegoals: req.body.homegoals,
+        awaygoals: req.body.awaygoals
+    };
+    console.log(put);
+connection.query('UPDATE tournamentresults SET ? WHERE tournamentresult_ID = ? ', [put, req.params.resultid], function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+
+/*TOURNAMENTGOALS*/
+
+app.get("/tournamentgoals/opponent/:teventid",function(req,res){
+connection.query('SELECT tournamentgoals_ID, goals, timestamps FROM tournamentgoals WHERE (playerID = 1) AND (tournamenteventID = ?)', req.params.teventid, function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+
+app.post("/tournamentgoals/new",function(req,res){
+  var post = {
+        tournamenteventID: req.body.tournamenteventid,
+        playerID: req.body.playerid,
+        goals: req.body.goals,
+        timestamps: req.body.timestamps
+    };
+    console.log(post);
+connection.query('INSERT INTO tournamentgoals SET ?', post, function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+app.put("/tournamentgoals/tournamentgoalsid/:tgoalsid",function(req,res){
+  var put = {
+        goals: req.body.goals,
+        timestamps: req.body.timestamps
+    };
+    console.log(put);
+connection.query('UPDATE tournamentgoals SET ? WHERE tournamentgoals_ID = ? ', [put, req.params.tgoalsid], function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+app.delete("/tournamentgoals/:tgoalsid",function(req,res){
+  var data = {
+        tgoalsid: req.params.tgoalsid
+    };
+    console.log(data.id);
+connection.query('DELETE FROM tournamentgoals WHERE tournamentgoals_ID = ?', data.tgoalsid, function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
 
 
 http.createServer(app).listen(app.get('port'), function(){
