@@ -1711,6 +1711,21 @@ connection.query(connquery, [data.teamid, data.year, data.eventtype], function(e
   });
 });
 
+app.get("/events/weekevents/:weekday",function(req,res){
+var weekDay = req.params.weekday;
+console.log(weekDay);
+var connquery = "SELECT events.event_ID, events.event_type, events.match_type, teams.team_name, events.locationID, CONVERT(DATE_FORMAT(events.date,'%d-%m-%Y'), CHAR(50)) as event_date, CONVERT(DATE_FORMAT(events.date,'%H:%i'), CHAR(50)) as event_time, COALESCE(results.homegoals, 1000) as homegoals, COALESCE(results.awaygoals, 1000) as awaygoals, CONVERT(COALESCE(results.result_ID, 'none'), CHAR(50)) as resultID, CONVERT(COALESCE(opponentteam.prefix, 'none'), CHAR(50)) as opponent_prefix, CONVERT(COALESCE(opponentteam.name, 'none'), CHAR(50)) as opponent_name, CONVERT(COALESCE(concat(opponentplace.prefix, ' ', opponentplace.name), 'none'), CHAR(50)) as event_location, events.comments, events.dressing_room, events.referee, events.annulation FROM events LEFT JOIN teams ON events.teamID = teams.team_ID LEFT JOIN results ON events.event_ID = results.eventID LEFT JOIN opponents AS opponentteam ON events.opponentID = opponentteam.opponent_ID LEFT JOIN opponents AS opponentplace ON events.locationID = opponentplace.opponent_ID WHERE WEEK(events.date,1) = WEEK('" +  weekDay + "',1) AND events.event_type <> 'Training' ORDER BY LPAD(lower(teams.team_name), 10,0) ASC";
+connection.query(connquery, function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
 
 app.get("/events/confirmedplayers/:eventid",function(req,res){
 connection.query('SELECT confirmed_players, declined_players, extra_players, confirmed_transport, declined_transport FROM events WHERE event_ID = ?', req.params.eventid, function(err, rows, fields) {
