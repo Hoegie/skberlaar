@@ -135,6 +135,36 @@ app.get("/skberlaar/ioslivepush/:teamid/:title/:body",function(req,res){
  });
 });
 
+app.get("/skberlaar/iospushdatemove/:teamid/:body",function(req,res){
+  var teamID = req.params.teamid;
+  var body = req.params.body;
+  console.log("iospushdatmove gehit !");
+  console.log(teamID);
+  console.log(body);
+  var notification4 = new apn.Notification();
+  notification4.topic = 'be.degronckel.skBerlaar';
+  notification4.expiry = Math.floor(Date.now() / 1000) + 3600;
+  notification4.sound = 'ping.aiff';
+  notification4.title = 'Verplaatsing !';
+  notification4.body = body;
+  console.log(teamID);
+  var connquery = "SELECT tokens.accountID, tokens.token FROM tokens LEFT JOIN accounts ON tokens.accountID = accounts.account_ID WHERE accounts.favorites REGEXP '[[:<:]]" + teamID + "[[:>:]]' AND tokens.send = 1 AND tokens.send_anul = 1 AND tokens.device_type = 'Apple'";
+  connection.query(connquery, function(err, rows, fields) {
+    if (!err){
+      res.end(JSON.stringify(rows));
+      console.log(rows)
+      rows.forEach(function(row, i) {
+          apnProvider.send(notification4, row.token).then(function(result) { 
+            console.log(result);
+          });
+      });
+    }else{
+      console.log('Error while performing Query.');
+    }
+ });
+});
+
+
 app.get("/skberlaar/iostestpush/:accountid",function(req,res){
   var accountID = req.params.accountid;
   var notification2 = new apn.Notification();
@@ -260,6 +290,36 @@ alarmMessage3.addNotification({
  });
 });
 
+
+app.get("/skberlaar/androidpushdatemove/:teamid/:body",function(req,res){
+var teamID = req.params.teamid;
+var body = req.params.body;
+var alarmMessage2 = new gcm.Message();
+alarmMessage2.addNotification({
+  title: 'Verplaatsing !',
+  body: body,
+  icon: 'skberlaarlogfinal',
+  sound: 'true'
+});
+  console.log(teamID);
+  var connquery = "SELECT tokens.accountID, tokens.token FROM tokens LEFT JOIN accounts ON tokens.accountID = accounts.account_ID WHERE accounts.favorites REGEXP '[[:<:]]" + teamID + "[[:>:]]' AND tokens.send = 1 AND tokens.send_anul = 1 AND tokens.device_type = 'Android'";
+  connection.query(connquery, function(err, rows, fields) {
+    if (!err){
+      res.end(JSON.stringify(rows));
+      console.log(rows)
+      rows.forEach(function(row, i) {
+          sender.sendNoRetry(alarmMessage2, { to : row.token }, function(err, response) {
+        if(err) console.error(err);
+        else {
+          console.log(JSON.stringify(response));
+        }
+      });
+      });
+    }else{
+      console.log('Error while performing Query.');
+    }
+ });
+});
 
 app.get("/skberlaar/androidtestpush/:accountid",function(req,res){
 var accountID = req.params.accountid;
