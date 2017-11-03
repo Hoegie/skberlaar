@@ -7,6 +7,8 @@ var gcm = require('node-gcm');
 var nodemailer = require('nodemailer');
 var ejs = require('ejs');
 var fs = require('fs');
+var xml2js = require('xml2js');
+var distance = require('gps-distance');
 var dateTime = require('node-datetime');
 var join = require('path').join;
 var http = require('http');
@@ -1444,6 +1446,36 @@ connection.query('SELECT confirmed_players FROM events where event_ID = ?', req.
   });
 });
 
+app.get("/phpconfirmedplayers/eventid/:eventid",function(req,res){
+connection.query('SELECT confirmed_players FROM events where event_ID = ?', req.params.eventid, function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    if (rows[0].confirmed_players != 'none'){
+      var confirms = '(' + rows[0].confirmed_players + ')';
+      console.log(confirms);
+      var connquery = "SELECT players.player_ID, players.first_name, players.last_name, players.pic_url, CONVERT(COALESCE((SELECT goals.goals_ID from goals WHERE goals.playerid = players.player_ID AND goals.eventID = " + req.params.eventid + "), 'none'), CHAR(50)) as goals_ID, COALESCE((SELECT goals.goals from goals WHERE goals.playerid = players.player_ID AND goals.eventID = " + req.params.eventid + "), 0) as goals, COALESCE((SELECT goals.timestamps from goals WHERE goals.playerid = players.player_ID AND goals.eventID = " + req.params.eventid + "), 'none') as timestamps FROM players where players.player_ID IN " + confirms + " GROUP BY players.last_name ORDER BY players.last_name";
+      console.log(connquery);
+      connection.query(connquery, confirms, function(err, rows, fields) {
+      /*connection.end();*/
+       if (!err){
+       console.log('The solution is: ', rows);
+       console.log(confirms);
+        res.end(JSON.stringify(rows));
+        }else{
+          console.log('Error while performing Query.');
+        }
+      }); 
+    } else {
+      var emptyArray = [];
+      res.end(JSON.stringify(emptyArray));
+    }
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
 app.get("/players/count",function(req,res){
 connection.query('SELECT COUNT(*) as number from players WHERE player_ID > 2', function(err, rows, fields) {
 /*connection.end();*/
@@ -1770,6 +1802,39 @@ connection.query(connquery, [data.teamid, data.year, data.eventtype], function(e
   }
   });
 });
+
+app.get("/phpevents/teamid/year/:teamid/:year/:month",function(req,res){
+  console.log("hit php events");
+  if (req.params.year == "Beide") {
+    var yearsearchstring = "%";
+  } else {
+     var yearsearchstring = req.params.year;
+  };
+  if (req.params.month == "Alle") {
+    var monthsearchstring = "%";
+  } else {
+    var monthsearchstring = req.params.month;
+  }
+  
+  var data = {
+        teamid: req.params.teamid,
+        year: yearsearchstring,
+        month: monthsearchstring
+  };
+  console.log(data);
+  var connquery = "SELECT events.event_ID, events.event_type, events.match_type, events.locationID, CONVERT(DATE_FORMAT(events.date,'%d-%m-%Y'), CHAR(50)) as event_date, CONVERT(DATE_FORMAT(events.date,'%H:%i'), CHAR(50)) as event_time, COALESCE(results.homegoals, 1000) as homegoals, COALESCE(results.awaygoals, 1000) as awaygoals, CONVERT(COALESCE(results.result_ID, 'none'), CHAR(50)) as resultID, CONVERT(COALESCE(opponentteam.prefix, 'none'), CHAR(50)) as opponent_prefix, CONVERT(COALESCE(opponentteam.name, 'none'), CHAR(50)) as opponent_name, CONVERT(COALESCE(concat(opponentplace.prefix, ' ', opponentplace.name), 'none'), CHAR(50)) as event_location, events.comments, events.dressing_room, events.referee, events.annulation FROM events LEFT JOIN results ON events.event_ID = results.eventID LEFT JOIN opponents AS opponentteam ON events.opponentID = opponentteam.opponent_ID LEFT JOIN opponents AS opponentplace ON events.locationID = opponentplace.opponent_ID WHERE (events.teamID = " + data.teamid + ") AND (YEAR(events.date) LIKE '" + data.year + "') AND (MONTH(events.date) LIKE '" + data.month + "') ORDER BY events.date ASC";
+  console.log(connquery);
+connection.query(connquery, [data.teamid, data.year], function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
 
 app.get("/events/weekevents/:weekday",function(req,res){
 var weekDay = req.params.weekday;
@@ -2561,6 +2626,55 @@ connection.query('DELETE FROM tournamentgoals WHERE tournamentgoals_ID = ?', dat
   });
 });
 
+
+/*GPX uploads*/
+
+app.get("/gpxuploads/eventid/:eventid",function(req,res){
+connection.query('SELECT eventID, playerID, file_name FROM gpxuploads WHERE eventID = ?', req.params.eventid, function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+app.post("/gpxuploads/new",function(req,res){
+  var post = {
+        eventID: req.body.eventid,
+        playerID: req.body.playerid,
+        file_name: req.body.filename
+    };
+    console.log(post);
+connection.query('INSERT INTO gpxuploads SET ?', post, function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+app.delete("/gpxuploads/:eventid/:playerid",function(req,res){
+  var data = {
+        eventID: req.params.eventid,
+        playerID: req.params.playerid
+    };
+    console.log(data.id);
+connection.query('DELETE FROM gpxuploads WHERE eventID = ? AND playerID = ?', [data.eventID, data.playerID], function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
 
 
 http.createServer(app).listen(app.get('port'), function(){
