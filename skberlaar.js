@@ -2677,6 +2677,90 @@ connection.query('DELETE FROM gpxuploads WHERE eventID = ? AND playerID = ?', [d
 });
 
 
+/*GPX data*/
+
+app.get("/gpxdata/players/eventid/:eventid",function(req,res){
+  var data = {
+        eventID: req.params.eventid
+    };
+connection.query('SELECT players.player_ID, players.first_name, players.last_name, players.pic_url, gpxuploads.file_name from gpxuploads LEFT JOIN players ON players.player_ID = gpxuploads.playerID WHERE gpxuploads.eventID = ? ORDER BY players.last_name', data.eventID, function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+app.get("/gpxdata/filename/:filename",function(req,res){
+var data = {
+      filename: req.params.filename
+  };
+//var dir = "/Applications/MAMP/htdocs/skberlaar/gpxfiles/";
+var dir = "/var/www/html/gpxfiles/";
+
+var parser = new xml2js.Parser({explicitRoot: false, mergeAttrs: true}); 
+var outputArray = [];
+
+fs.readFile(dir + data.filename, function(err,data){
+  parser.parseString(data, function(err, result){
+
+      //console.dir(result);
+      var prevDate;
+      var track = result.trk;
+      var trackseg = track[0].trkseg;
+      var trackpt = trackseg[0].trkpt;
+      var path = [];
+
+      console.log(trackpt);
+
+      for(var item of trackpt){
+        var outputSeconds;
+        var extension = item.extensions;
+
+        var lat = item.lat[0];
+        var lon = item.lon[0];
+        path.push([lat, lon]);
+
+        if (extension != undefined){
+
+          var realTime = item.time[0];
+          console.log(realTime);  
+          var momentTime = moment(realTime);
+
+          var timeString = momentTime.format("HH:mm:ss").toString();
+          //console.log(timeString);
+
+          if (prevDate === undefined){
+              outputSeconds = 0;
+          } else {
+              outputSeconds = momentTime.diff(prevDate, "seconds") + outputSeconds;
+          }
+          prevDate = momentTime;
+          console.log(outputSeconds);  
+          //var gpxtpxkey = Object.keys(extension[0])[0];
+          //var gpxtpx = Object.values(extensionDic)[0];
+          var extensionDic = extension[0];
+          var gpxtpx = extensionDic["gpxtpx:TrackPointExtension"];
+          var hr = gpxtpx[0]["gpxtpx:hr"][0];
+          console.log(hr);
+
+          var outputDic = {"timeStamp": outputSeconds, "hartRate": hr}
+          outputArray.push(outputDic);
+
+        }
+      }
+
+      console.log("Distance travelled :" + distance(path) + " km");  
+      res.end(JSON.stringify(outputArray));
+  });
+
+});
+
+});
+
 http.createServer(app).listen(app.get('port'), function(){
   console.log("Express server listening on port " + app.get('port'));
 });
