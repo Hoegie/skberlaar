@@ -2753,7 +2753,8 @@ fs.readFile(dir + data.filename, function(err,data){
         }
       }
 
-      console.log("Distance travelled :" + distance(path) + " km");  
+      console.log("Distance travelled :" + distance(path) + " km"); 
+      outputArray[0]['distance'] = String(distance(path)); 
       res.end(JSON.stringify(outputArray));
   });
 
