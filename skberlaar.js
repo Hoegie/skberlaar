@@ -1853,7 +1853,7 @@ connection.query(connquery, function(err, rows, fields) {
 
 
 app.get("/events/confirmedplayers/:eventid",function(req,res){
-connection.query('SELECT confirmed_players, declined_players, extra_players, confirmed_transport, declined_transport FROM events WHERE event_ID = ?', req.params.eventid, function(err, rows, fields) {
+connection.query('SELECT confirmed_players, declined_players, extra_players, unselected_players, confirmed_transport, declined_transport FROM events WHERE event_ID = ?', req.params.eventid, function(err, rows, fields) {
 /*connection.end();*/
   if (!err){
     console.log('The solution is: ', rows);
@@ -2035,6 +2035,22 @@ app.put("/events/transport/:eventid",function(req,res){
   var put = {
         confirmed_transport: req.body.confirmedtransport,
         declined_transport: req.body.declinedtransport
+    };
+    console.log(put);
+connection.query('UPDATE events SET ? WHERE event_ID = ?', [put, req.params.eventid], function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+app.put("/events/unselectplayers/:eventid",function(req,res){
+  var put = {
+        unselected_players: req.body.unselectedplayers
     };
     console.log(put);
 connection.query('UPDATE events SET ? WHERE event_ID = ?', [put, req.params.eventid], function(err,result) {
