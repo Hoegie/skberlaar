@@ -1605,6 +1605,92 @@ connection.query('SELECT players_emails.email_address FROM players LEFT JOIN pla
   });
 });
 
+app.get("/playersemail/teamid/:teamid",function(req,res){
+connection.query('SELECT players_emails.email_address FROM players LEFT JOIN players_emails ON players.player_ID = players_emails.playerID WHERE players.teamID = ? AND players_emails.email_address is not null', req.params.teamid, function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+app.get("/playersemail/teamid/eventid/:teamid/:eventid",function(req,res){
+  //get all email addressess of fixed teamplayers minus the declined ones, minus the unselected ones and plus the extra players.
+var teamID = req.params.teamid;
+var eventID = req.params.eventid;
+var playerIDarray = [];
+var playerIDString = '';
+var declinedPlayersString = '';
+var unselectedPlayersString = '';
+var extraPlayersString = '';
+var declinedPlayersArray = [];
+var unselectedPlayersArray = [];
+var extraPlayersArray = [];
+
+connection.query('SELECT players.player_ID FROM players WHERE teamID = ?', teamID, function(err, rows, fields) {
+  if (!err){
+    rows.forEach(function(row, i) {
+      playerIDarray.push(row.player_ID.toString());
+    });
+
+    //Query2
+    connection.query('SELECT declined_players, extra_players, unselected_players FROM events WHERE event_ID = ?', eventID, function(err, rows, fields) {
+      if (!err){
+       console.log('The solution is: ', rows);
+        declinedPlayersString = rows[0].declined_players;
+        extraPlayersString = rows[0].extra_players;
+        unselectedPlayersString = rows[0].unselected_players;
+
+
+        if (declinedPlayersString != 'none'){
+          declinedPlayersArray = declinedPlayersString.split(",");
+          declinedPlayersArray.forEach(function(declinedPlayerID, i){
+              if (playerIDarray.indexOf(declinedPlayerID) > -1){
+                console.log("gehit !");
+                playerIDarray.splice(playerIDarray.indexOf(declinedPlayerID), 1);
+              }
+          });
+        }
+
+        if (unselectedPlayersString != 'none'){
+          unselectedPlayersArray = unselectedPlayersString.split(",");
+          unselectedPlayersArray.forEach(function(unselectedPlayerID,i){
+              if (playerIDarray.indexOf(unselectedPlayerID) > -1){
+                playerIDarray.splice(playerIDarray.indexOf(unselectedPlayerID), 1);
+              }
+          });
+         }
+
+        if (extraPlayersString != 'none'){
+          extraPlayersArray = extraPlayersString.split(",");
+          extraPlayersArray.forEach(function(extraPlayerID, i){
+            playerIDarray.push(extraPlayerID);
+          });
+        }  
+        
+        playerIDString = '(' + playerIDarray.join() + ')';
+        var connQuery = "SELECT players_emails.email_address FROM players_emails WHERE players_emails.email_address is not null AND players_emails.playerID IN " + playerIDString;  
+        connection.query(connQuery, teamID, function(err, rows, fields) {
+          if (!err){
+            console.log('The solution is: ', rows);
+            res.end(JSON.stringify(rows));
+          }else{
+            console.log('Error while performing Query3.');
+          }
+        });
+      }else{
+        console.log('Error while performing Query2.');
+      }
+    });
+  }else{
+    console.log('Error while performing Query1.');
+  }
+  });
+});
+
 app.post("/playersemail/new",function(req,res){
   var post = {
         playerID: req.body.playerid,
