@@ -1,4 +1,4 @@
-//VERSION 1,0,5 SSL
+//VERSION 1,0,6 SSL
 var express    = require('express');
 var mysql      = require('mysql');
 var bodyParser = require('body-parser');
