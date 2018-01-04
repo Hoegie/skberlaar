@@ -1504,6 +1504,7 @@ connection.query(connquery, post, function(err,result) {
     res.end(JSON.stringify(result));
   }else{
     console.log('Error while performing Query.');
+    console.log(err);
   }
   });
 });
