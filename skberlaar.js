@@ -476,7 +476,7 @@ connection.query("SELECT events.referee, events.teamID, events.event_type, event
         awayteamDB = 'SK BERLAAR';
     }
     /*teaminfoquery*/
-    connection.query('SELECT teams.team_name, teams.team_division, teams.team_series, trainer.first_name as trainer_first_name, trainer.last_name as trainer_last_name, trainer.email_address as trainer_email_address, delegee.first_name as delegee_first_name, delegee.last_name as delegee_last_name, delegee.email_address as delegee_email_address, COALESCE(trainer2.email_address, "none") as trainer2_email_address, COALESCE(delegee2.email_address, "none") as delegee2_email_address FROM teams LEFT JOIN staff as trainer ON T1_ID = trainer.staff_ID LEFT JOIN staff AS trainer2 ON T2_ID = trainer2.staff_ID LEFT JOIN staff AS delegee ON D1_ID = delegee.staff_ID LEFT JOIN staff AS delegee2 ON D2_ID = delegee2.staff_ID WHERE team_ID = ?', teamID, function(err, rows, fields) {
+    connection.query('SELECT teams.team_name, teams.team_division, teams.team_series, trainer.first_name as trainer_first_name, trainer.last_name as trainer_last_name, trainer.email_address as trainer_email_address, delegee.first_name as delegee_first_name, delegee.last_name as delegee_last_name, delegee.email_address as delegee_email_address, COALESCE(trainer2.email_address, "none") as trainer2_email_address, COALESCE(delegee2.email_address, "none") as delegee2_email_address, COALESCE(delegee2.first_name, "none") as delegee2_first_name, COALESCE(delegee2.last_name, "none") as delegee2_last_name FROM teams LEFT JOIN staff as trainer ON T1_ID = trainer.staff_ID LEFT JOIN staff AS trainer2 ON T2_ID = trainer2.staff_ID LEFT JOIN staff AS delegee ON D1_ID = delegee.staff_ID LEFT JOIN staff AS delegee2 ON D2_ID = delegee2.staff_ID WHERE team_ID = ?', teamID, function(err, rows, fields) {
        
        if (!err){
           var teamnameDB = rows[0].team_name;
@@ -484,6 +484,7 @@ connection.query("SELECT events.referee, events.teamID, events.event_type, event
           var teamseriesDB = rows[0].team_series;
           var trainernameDB = rows[0].trainer_first_name + " " + rows[0].trainer_last_name;
           var delegeenameDB = rows[0].delegee_first_name + " " + rows[0].delegee_last_name;
+          if (rows[0].delgee2_first_name != "none"){delegeenameDB = delegeenameDB + ", " + rows[0].delegee2_first_name + " " + rows[0].delegee2_last_name;}
           var ccEmailAddressArray = [];
           ccEmailAddressArray.push(rows[0].trainer_email_address);
           ccEmailAddressArray.push(rows[0].delegee_email_address);
@@ -1857,6 +1858,37 @@ connection.query(connquery, [data.teamid, data.year, data.eventtype], function(e
   });
 });
 
+app.post("/events2/teamid/year/eventtype/:teamid/:year",function(req,res){
+  console.log("hit");
+  if (req.params.year == "Beide") {
+    var yearsearchstring = "%";
+  } else {
+     var yearsearchstring = req.params.year;
+  };
+  console.log("body :");
+  console.log(req.body);
+  var eventtypearray = req.body.eventtypearray;
+  console.log("eventtypearray :");
+  console.log(eventtypearray);
+  var eventtype = '(' + eventtypearray.join() + ')';
+  var data = {
+        teamid: req.params.teamid,
+        year: yearsearchstring,
+        eventtype: eventtype
+  };
+  console.log(data);
+  var connquery = "SELECT events.event_ID, events.event_type, events.match_type, events.locationID, events.homelocationID, CONVERT(DATE_FORMAT(events.date,'%d-%m-%Y'), CHAR(50)) as event_date, CONVERT(DATE_FORMAT(events.date,'%H:%i'), CHAR(50)) as event_time, COALESCE(results.homegoals, 1000) as homegoals, COALESCE(results.awaygoals, 1000) as awaygoals, CONVERT(COALESCE(results.result_ID, 'none'), CHAR(50)) as resultID, CONVERT(COALESCE(opponentteam.prefix, 'none'), CHAR(50)) as opponent_prefix, CONVERT(COALESCE(opponentteam.name, 'none'), CHAR(50)) as opponent_name, CONVERT(COALESCE(concat(opponentplace.prefix, ' ', opponentplace.name), 'none'), CHAR(50)) as event_location, events.comments, events.dressing_room, events.referee, events.annulation FROM events LEFT JOIN results ON events.event_ID = results.eventID LEFT JOIN opponents AS opponentteam ON events.opponentID = opponentteam.opponent_ID LEFT JOIN opponents AS opponentplace ON events.locationID = opponentplace.opponent_ID WHERE (events.teamID = " + data.teamid + ") AND (YEAR(events.date) LIKE '" + data.year + "') AND (events.event_type IN " + data.eventtype + ") ORDER BY events.date ASC";
+  console.log(connquery);
+connection.query(connquery, [data.teamid, data.year, data.eventtype], function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
 
 app.post("/events/teamid/year/eventtype/android/:teamid/:year",function(req,res){
   console.log("hit");
@@ -1877,7 +1909,39 @@ app.post("/events/teamid/year/eventtype/android/:teamid/:year",function(req,res)
         eventtype: eventtype
   };
   console.log(data);
-  var connquery = "SELECT events.event_ID, events.event_type, events.match_type, events.locationID, CONVERT(DATE_FORMAT(events.date,'%d-%m-%Y'), CHAR(50)) as event_date, CONVERT(DATE_FORMAT(events.date,'%H:%i'), CHAR(50)) as event_time, COALESCE(results.homegoals, 1000) as homegoals, COALESCE(results.awaygoals, 1000) as awaygoals, CONVERT(COALESCE(results.result_ID, 'none'), CHAR(50)) as resultID, CONVERT(COALESCE(opponentteam.prefix, 'none'), CHAR(50)) as opponent_prefix, CONVERT(COALESCE(opponentteam.name, 'none'), CHAR(50)) as opponent_name, CONVERT(COALESCE(concat(opponentplace.prefix, ' ', opponentplace.name), 'none'), CHAR(50)) as event_location, events.comments, events.dressing_room, events.referee, events.annulation FROM events LEFT JOIN results ON events.event_ID = results.eventID LEFT JOIN opponents AS opponentteam ON events.opponentID = opponentteam.opponent_ID LEFT JOIN opponents AS opponentplace ON events.locationID = opponentplace.opponent_ID WHERE (events.teamID = " + data.teamid + ") AND (YEAR(events.date) LIKE '" + data.year + "') AND (events.event_type IN " + data.eventtype + ") ORDER BY events.date ASC";
+  var connquery = "SELECT events.event_ID, events.event_type, events.match_type, events.locationID + events.homelocationID as locationID, CONVERT(DATE_FORMAT(events.date,'%d-%m-%Y'), CHAR(50)) as event_date, CONVERT(DATE_FORMAT(events.date,'%H:%i'), CHAR(50)) as event_time, COALESCE(results.homegoals, 1000) as homegoals, COALESCE(results.awaygoals, 1000) as awaygoals, CONVERT(COALESCE(results.result_ID, 'none'), CHAR(50)) as resultID, CONVERT(COALESCE(opponentteam.prefix, 'none'), CHAR(50)) as opponent_prefix, CONVERT(COALESCE(opponentteam.name, 'none'), CHAR(50)) as opponent_name, CONVERT(COALESCE(concat(opponentplace.prefix, ' ', opponentplace.name), 'none'), CHAR(50)) as event_location, events.comments, events.dressing_room, events.referee, events.annulation FROM events LEFT JOIN results ON events.event_ID = results.eventID LEFT JOIN opponents AS opponentteam ON events.opponentID = opponentteam.opponent_ID LEFT JOIN opponents AS opponentplace ON events.locationID = opponentplace.opponent_ID WHERE (events.teamID = " + data.teamid + ") AND (YEAR(events.date) LIKE '" + data.year + "') AND (events.event_type IN " + data.eventtype + ") ORDER BY events.date ASC";
+  console.log(connquery);
+connection.query(connquery, [data.teamid, data.year, data.eventtype], function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+app.post("/events2/teamid/year/eventtype/android/:teamid/:year",function(req,res){
+  console.log("hit");
+  if (req.params.year == "Beide") {
+    var yearsearchstring = "%";
+  } else {
+     var yearsearchstring = req.params.year;
+  };
+  var eventtypedic = req.body[0];
+  var eventtypestring = req.body[0].eventtypearray;
+  eventtypestring = eventtypestring.replace('[',"");
+  eventtypestring = eventtypestring.replace(']',"");
+  eventtypearray = eventtypestring.split(",");
+  var eventtype = '(' + eventtypearray.join() + ')';
+  var data = {
+        teamid: req.params.teamid,
+        year: yearsearchstring,
+        eventtype: eventtype
+  };
+  console.log(data);
+  var connquery = "SELECT events.event_ID, events.event_type, events.match_type, events.locationID, events.homelocationID, CONVERT(DATE_FORMAT(events.date,'%d-%m-%Y'), CHAR(50)) as event_date, CONVERT(DATE_FORMAT(events.date,'%H:%i'), CHAR(50)) as event_time, COALESCE(results.homegoals, 1000) as homegoals, COALESCE(results.awaygoals, 1000) as awaygoals, CONVERT(COALESCE(results.result_ID, 'none'), CHAR(50)) as resultID, CONVERT(COALESCE(opponentteam.prefix, 'none'), CHAR(50)) as opponent_prefix, CONVERT(COALESCE(opponentteam.name, 'none'), CHAR(50)) as opponent_name, CONVERT(COALESCE(concat(opponentplace.prefix, ' ', opponentplace.name), 'none'), CHAR(50)) as event_location, events.comments, events.dressing_room, events.referee, events.annulation FROM events LEFT JOIN results ON events.event_ID = results.eventID LEFT JOIN opponents AS opponentteam ON events.opponentID = opponentteam.opponent_ID LEFT JOIN opponents AS opponentplace ON events.locationID = opponentplace.opponent_ID WHERE (events.teamID = " + data.teamid + ") AND (YEAR(events.date) LIKE '" + data.year + "') AND (events.event_type IN " + data.eventtype + ") ORDER BY events.date ASC";
   console.log(connquery);
 connection.query(connquery, [data.teamid, data.year, data.eventtype], function(err, rows, fields) {
 /*connection.end();*/
@@ -1926,7 +1990,22 @@ connection.query(connquery, [data.teamid, data.year], function(err, rows, fields
 app.get("/events/weekevents/:weekday",function(req,res){
 var weekDay = req.params.weekday;
 console.log(weekDay);
-var connquery = "SELECT events.event_ID, events.event_type, events.match_type, events.teamID, teams.team_name, events.locationID, CONVERT(DATE_FORMAT(events.date,'%d-%m-%Y'), CHAR(50)) as event_date, CONVERT(DATE_FORMAT(events.date,'%H:%i'), CHAR(50)) as event_time, COALESCE(results.homegoals, 1000) as homegoals, COALESCE(results.awaygoals, 1000) as awaygoals, CONVERT(COALESCE(results.result_ID, 'none'), CHAR(50)) as resultID, CONVERT(COALESCE(opponentteam.prefix, 'none'), CHAR(50)) as opponent_prefix, CONVERT(COALESCE(opponentteam.name, 'none'), CHAR(50)) as opponent_name, CONVERT(COALESCE(concat(opponentplace.prefix, ' ', opponentplace.name), 'none'), CHAR(50)) as event_location, events.comments, events.dressing_room, events.referee, events.annulation FROM events LEFT JOIN teams ON events.teamID = teams.team_ID LEFT JOIN results ON events.event_ID = results.eventID LEFT JOIN opponents AS opponentteam ON events.opponentID = opponentteam.opponent_ID LEFT JOIN opponents AS opponentplace ON events.locationID = opponentplace.opponent_ID WHERE WEEK(events.date,1) = WEEK('" +  weekDay + "',1) AND events.event_type <> 'Training' AND events.annulation <> '1' ORDER BY events.date ASC, LPAD(lower(teams.team_name), 10,0) ASC";
+var connquery = "SELECT events.event_ID, events.event_type, events.match_type, events.teamID, teams.team_name, events.locationID + events.homelocationID as locationID, CONVERT(DATE_FORMAT(events.date,'%d-%m-%Y'), CHAR(50)) as event_date, CONVERT(DATE_FORMAT(events.date,'%H:%i'), CHAR(50)) as event_time, COALESCE(results.homegoals, 1000) as homegoals, COALESCE(results.awaygoals, 1000) as awaygoals, CONVERT(COALESCE(results.result_ID, 'none'), CHAR(50)) as resultID, CONVERT(COALESCE(opponentteam.prefix, 'none'), CHAR(50)) as opponent_prefix, CONVERT(COALESCE(opponentteam.name, 'none'), CHAR(50)) as opponent_name, CONVERT(COALESCE(concat(opponentplace.prefix, ' ', opponentplace.name), 'none'), CHAR(50)) as event_location, events.comments, events.dressing_room, events.referee, events.annulation FROM events LEFT JOIN teams ON events.teamID = teams.team_ID LEFT JOIN results ON events.event_ID = results.eventID LEFT JOIN opponents AS opponentteam ON events.opponentID = opponentteam.opponent_ID LEFT JOIN opponents AS opponentplace ON events.locationID = opponentplace.opponent_ID WHERE WEEK(events.date,1) = WEEK('" +  weekDay + "',1) AND events.event_type <> 'Training' AND events.annulation <> '1' ORDER BY events.date ASC, LPAD(lower(teams.team_name), 10,0) ASC";
+connection.query(connquery, function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+app.get("/events2/weekevents/:weekday",function(req,res){
+var weekDay = req.params.weekday;
+console.log(weekDay);
+var connquery = "SELECT events.event_ID, events.event_type, events.match_type, events.teamID, teams.team_name, events.locationID, events.homelocationID, CONVERT(DATE_FORMAT(events.date,'%d-%m-%Y'), CHAR(50)) as event_date, CONVERT(DATE_FORMAT(events.date,'%H:%i'), CHAR(50)) as event_time, COALESCE(results.homegoals, 1000) as homegoals, COALESCE(results.awaygoals, 1000) as awaygoals, CONVERT(COALESCE(results.result_ID, 'none'), CHAR(50)) as resultID, CONVERT(COALESCE(opponentteam.prefix, 'none'), CHAR(50)) as opponent_prefix, CONVERT(COALESCE(opponentteam.name, 'none'), CHAR(50)) as opponent_name, CONVERT(COALESCE(concat(opponentplace.prefix, ' ', opponentplace.name), 'none'), CHAR(50)) as event_location, events.comments, events.dressing_room, events.referee, events.annulation FROM events LEFT JOIN teams ON events.teamID = teams.team_ID LEFT JOIN results ON events.event_ID = results.eventID LEFT JOIN opponents AS opponentteam ON events.opponentID = opponentteam.opponent_ID LEFT JOIN opponents AS opponentplace ON events.locationID = opponentplace.opponent_ID WHERE WEEK(events.date,1) = WEEK('" +  weekDay + "',1) AND events.event_type <> 'Training' AND events.annulation <> '1' ORDER BY events.date ASC, LPAD(lower(teams.team_name), 10,0) ASC";
 connection.query(connquery, function(err, rows, fields) {
 /*connection.end();*/
   if (!err){
@@ -2059,6 +2138,55 @@ app.post("/events/trainingrepeat/new",function(req,res){
 });
 
 
+app.post("/events2/trainingrepeat/new",function(req,res){
+  var post = {
+        teamID: req.body.teamid,
+        event_type: req.body.eventtype,
+        date: req.body.date,
+        match_type: req.body.matchtype,
+        opponentID: req.body.opponentid,
+        locationID: req.body.locationid,
+        homelocationID: req.body.homelocationid,
+        comments: req.body.comments
+    };
+    console.log(post);
+    var daysArray  = req.body.daysarray;
+    console.log("daysarray : ")
+    console.log(daysArray);
+    var startDate = moment(req.body.date, "DD-MM-YYYY HH:mm");
+    var endDate = moment(req.body.enddate, "DD-MM-YYYY HH:mm");
+
+    while (startDate.isSameOrBefore(endDate)) {
+
+      if (daysArray.includes(startDate.format("dddd"))){
+        var trainingDateString = startDate.format("DD-MM-YYYY HH:mm").toString();
+        console.log(trainingDateString);  
+
+        var connquery = "INSERT INTO events SET date = STR_TO_DATE('" + trainingDateString + "','%d-%m-%Y  %H:%i'), teamID = '" + post.teamID + "', event_type = '" + post.event_type + "', match_type = '" + post.match_type + "', opponentID = '" + post.opponentID + "', locationID = '" + post.locationID + "', homelocationID = '" + post.homelocationID + "', comments = '" + post.comments + "'";
+        console.log(connquery);
+        connection.query(connquery, post, function(err,result) {
+    
+        if (!err){
+          console.log(result);
+          var testDate = startDate;
+          testDate.add(1, 'days');
+          if (!testDate.isSameOrBefore(endDate)){
+            res.end(JSON.stringify(result));
+          }
+          
+        }else{
+          console.log('Error while performing Query.');
+        }
+        });
+
+      }
+
+    startDate.add(1, 'days');
+
+    }
+
+});
+
 app.post("/events/new",function(req,res){
   var post = {
         teamID: req.body.teamid,
@@ -2083,6 +2211,47 @@ connection.query(connquery, post, function(err,result) {
   });
 });
 
+app.post("/events2/new",function(req,res){
+  var post = {
+        teamID: req.body.teamid,
+        event_type: req.body.eventtype,
+        date: req.body.date,
+        match_type: req.body.matchtype,
+        opponentID: req.body.opponentid,
+        locationID: req.body.locationid,
+        homelocationID: req.body.homelocationid,
+        comments: req.body.comments
+    };
+    console.log(post);
+    var connquery = "INSERT INTO events SET date = STR_TO_DATE('" + post.date + "','%d-%m-%Y  %H:%i'), teamID = '" + post.teamID + "', event_type = '" + post.event_type + "', match_type = '" + post.match_type + "', opponentID = '" + post.opponentID + "', locationID = '" + post.locationID + "', homelocationID = '" + post.homelocationID + "', comments = '" + post.comments + "'";
+    console.log(connquery);
+connection.query(connquery, post, function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+app.put("/events/location/:eventid",function(req,res){
+  var put = {
+        locationID: req.body.locationid,
+        homelocationID: req.body.homelocationid
+    };
+    console.log(put);
+connection.query('UPDATE events SET ? WHERE event_ID = ?', [put, req.params.eventid], function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
 
 app.put("/events/annulation/:eventid",function(req,res){
   var put = {
@@ -2234,6 +2403,75 @@ app.delete("/events/:eventid",function(req,res){
     };
     console.log(data.id);
 connection.query('DELETE FROM events WHERE event_ID = ?', data.eventid, function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+
+
+/*HOMELOCATIONS*/
+
+app.get("/homelocations/all",function(req,res){
+connection.query('SELECT * FROM homelocations', function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+
+app.get("/homelocations/homelocationid/:homelocationid",function(req,res){
+connection.query('SELECT * FROM homelocations where homelocation_ID = ?', req.params.homelocationid, function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.end(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+app.post("/homelocations/new",function(req,res){
+  var post = {
+        name: req.body.name,
+        street: req.body.street,
+        street_nr: req.body.streetnr,
+        postal_code: req.body.postalcode,
+        town: req.body.town
+    };
+    console.log(post);
+connection.query('INSERT INTO homelocations SET ?', post, function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+app.put("/homelocations/homelocationid/:homelocationid",function(req,res){
+  var put = {
+        name: req.body.name,
+        street: req.body.street,
+        street_nr: req.body.streetnr,
+        postal_code: req.body.postalcode,
+        town: req.body.town
+    };
+    console.log(put);
+connection.query('UPDATE homelocations SET ? WHERE homelocation_ID = ? ', [put, req.params.homelocationid], function(err,result) {
 /*connection.end();*/
   if (!err){
     console.log(result);
