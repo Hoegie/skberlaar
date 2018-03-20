@@ -2149,6 +2149,7 @@ app.post("/events2/trainingrepeat/new",function(req,res){
         homelocationID: req.body.homelocationid,
         comments: req.body.comments
     };
+    if (post.locationID == '0' && post.homelocationID == '0'){post.homelocationID = '1';}
     console.log(post);
     var daysArray  = req.body.daysarray;
     console.log("daysarray : ")
@@ -2222,6 +2223,7 @@ app.post("/events2/new",function(req,res){
         homelocationID: req.body.homelocationid,
         comments: req.body.comments
     };
+    if (post.locationID == '0' && post.homelocationID == '0'){post.homelocationID = '1';}
     console.log(post);
     var connquery = "INSERT INTO events SET date = STR_TO_DATE('" + post.date + "','%d-%m-%Y  %H:%i'), teamID = '" + post.teamID + "', event_type = '" + post.event_type + "', match_type = '" + post.match_type + "', opponentID = '" + post.opponentID + "', locationID = '" + post.locationID + "', homelocationID = '" + post.homelocationID + "', comments = '" + post.comments + "'";
     console.log(connquery);
