@@ -670,6 +670,235 @@ connection.query("SELECT events.referee, events.teamID, events.event_type, event
   
 });
 
+app.get("/tournamentexport/:teventid",function(req,res){
+var tournamentEventID = req.params.teventid;
+var htmltemplate = fs.readFileSync('wedstrijdblad.html',{encoding:'utf-8'});
+
+/*matchinfoquery*/
+connection.query("SELECT tournamentevents.referee, tournamentevents.teamID, tournamentevents.match_type, tournamentevents.confirmed_players, CONVERT(DATE_FORMAT(tournamentevents.date,'%d-%m-%Y'), CHAR(50)) as event_date, CONVERT(DATE_FORMAT(tournamentevents.date,'%H:%i'), CHAR(50)) as event_time, COALESCE(tournamentresults.homegoals, 1000) as homegoals, COALESCE(tournamentresults.awaygoals, 1000) as awaygoals, CONVERT(COALESCE(concat(opponentteam.prefix, ' ', opponentteam.name), 'none'), CHAR(50)) as opponent_name, CONVERT(COALESCE(concat(opponentplace.prefix, ' ', opponentplace.name), 'none'), CHAR(50)) as event_location FROM tournamentevents LEFT JOIN tournamentresults ON tournamentevents.tournamentevent_ID = tournamentresults.tournamenteventID LEFT JOIN opponents AS opponentteam ON tournamentevents.opponentID = opponentteam.opponent_ID LEFT JOIN opponents AS opponentplace ON tournamentevents.locationID = opponentplace.opponent_ID WHERE tournamentevent_ID = ?", tournamentEventID, function(err, rows, fields) {
+
+  if (!err){
+    var teamID = rows[0].teamID;
+    var confirms = "(" + rows[0].confirmed_players + ",1" + ",2" +")";
+    var confirms1 = "(" + rows[0].confirmed_players + ")";
+    var eventTypeDB = "Tornooi Wedstrijd";
+    var eventDateDB = rows[0].event_date;
+    var eventTimeDB = rows[0].event_time;
+    var homegoalsDB = rows[0].homegoals;
+    var awaygoalsDB = rows[0].awaygoals;
+    var matchtypeDB = rows[0].match_type;
+    var locationDB = rows[0].event_location;
+    var opponentnameDB = rows[0].opponent_name;
+    var refereeDB = rows[0].referee;
+    var hometeamDB = '';
+    var awayteamDB = '';
+
+    if (refereeDB == 'none'){
+        refereeDB = "Niet gekend"
+    }
+
+    if (matchtypeDB == 'home'){
+        hometeamDB = 'SK BERLAAR';
+        awayteamDB = opponentnameDB;  
+    }else{
+        hometeamDB = opponentnameDB;
+        awayteamDB = 'SK BERLAAR';
+    }
+    /*teaminfoquery*/
+    connection.query('SELECT teams.team_name, teams.team_division, teams.team_series, trainer.first_name as trainer_first_name, trainer.last_name as trainer_last_name, trainer.email_address as trainer_email_address, delegee.first_name as delegee_first_name, delegee.last_name as delegee_last_name, delegee.email_address as delegee_email_address, COALESCE(trainer2.email_address, "none") as trainer2_email_address, COALESCE(delegee2.email_address, "none") as delegee2_email_address FROM teams LEFT JOIN staff as trainer ON T1_ID = trainer.staff_ID LEFT JOIN staff AS trainer2 ON T2_ID = trainer2.staff_ID LEFT JOIN staff AS delegee ON D1_ID = delegee.staff_ID LEFT JOIN staff AS delegee2 ON D2_ID = delegee2.staff_ID WHERE team_ID = ?', teamID, function(err, rows, fields) {
+       
+       if (!err){
+          var teamnameDB = rows[0].team_name;
+          var teamdivisionDB = rows[0].team_division;
+          var teamseriesDB = rows[0].team_series;
+          var trainernameDB = rows[0].trainer_first_name + " " + rows[0].trainer_last_name;
+          var delegeenameDB = rows[0].delegee_first_name + " " + rows[0].delegee_last_name;
+          var ccEmailAddressArray = [];
+          ccEmailAddressArray.push(rows[0].trainer_email_address);
+          ccEmailAddressArray.push(rows[0].delegee_email_address);
+
+          if (rows[0].trainer2_email_address != 'none') {ccEmailAddressArray.push(rows[0].trainer2_email_address);}
+          if (rows[0].delegee2_email_address != 'none') {ccEmailAddressArray.push(rows[0].delegee2_email_address);}
+
+
+          /*playersquery*/  
+          var connquery = "SELECT players.first_name as firstname, players.last_name as lastname, COALESCE((SELECT tournamentgoals.goals from tournamentgoals WHERE tournamentgoals.playerid = players.player_ID AND tournamentgoals.tournamenteventID = " + tournamentEventID + "), 0) as goals FROM players where players.player_ID IN " + confirms1;
+          connection.query(connquery, function(err, rows, fields) {
+
+            if (!err){
+              var players = rows;
+
+
+              /*scoresquery*/
+              var connquery2 = "SELECT players.first_name, players.last_name, COALESCE((SELECT tournamentgoals.goals from tournamentgoals WHERE tournamentgoals.playerid = players.player_ID AND tournamentgoals.tournamenteventID = " + tournamentEventID + "), 0) as goals, COALESCE((SELECT tournamentgoals.timestamps from tournamentgoals WHERE tournamentgoals.playerid = players.player_ID AND tournamentgoals.tournamenteventID = " + tournamentEventID + "), 'none') as timestamps FROM players where players.player_ID IN " + confirms + " AND COALESCE((SELECT tournamentgoals.goals from tournamentgoals WHERE tournamentgoals.playerid = players.player_ID AND tournamentgoals.tournamenteventID = " + tournamentEventID + "), 0) <> '0'"
+              connection.query(connquery2, function(err, rows, fields) {
+
+                if (!err){
+                  
+                    var scoresarray = [];
+                    rows.forEach(function(row, i) {
+
+                        var timestampstring = row.timestamps;
+                        var timestamparray = timestampstring.split(",");
+                        
+                        timestamparray.forEach(function(timestampitem,i) {
+
+                            var tempscoredic = {
+
+                                timestamp: timestampitem,
+                                name: row.first_name + " " + row.last_name
+
+                            };
+                            scoresarray.push(tempscoredic);
+
+                        });
+                        scoresarray.sort(function(a,b){return a.timestamp-b.timestamp});
+
+                    }); 
+
+                  if (players.length > scoresarray.length) {
+                      //fill out the scoresarray
+                      var difference =  players.length - scoresarray.length;
+                      var emptyscoredic = {
+
+                                timestamp: "",
+                                name: ""
+
+                            };
+                      for (i = 0; i < difference; i++) {
+                          scoresarray.push(emptyscoredic);
+                      }
+
+                  } else if (players.length < scoresarray.length) {
+                      //fill out the playersarray
+                      var difference =  scoresarray.length - players.length;
+                      var emptyplayersdic = {
+                            lastname: "",
+                            firstname: "",
+                            goals: ""
+                      };
+                      for (i = 0; i < difference; i++) {
+                            players.push(emptyplayersdic);
+                      }
+
+                  }
+
+                  var htmloutput = ejs.render(htmltemplate, {
+                  hometeam : hometeamDB,
+                  awayteam : awayteamDB,
+                  matchtype : eventTypeDB,
+                  departement : teamnameDB + " " + teamdivisionDB,
+                  series : teamseriesDB,
+                  gamedate : eventDateDB,
+                  gametime : eventTimeDB,
+                  location : locationDB,
+                  delegee : delegeenameDB,
+                  T1 : trainernameDB,
+                  homegoals : homegoalsDB,
+                  awaygoals : awaygoalsDB,
+                  players: players,
+                  scores: scoresarray,
+                  referee: refereeDB
+                  });
+
+
+                  var dt = dateTime.create();
+                  var formatted = dt.format('d_m_Y_H_M_S');
+
+                  //var fileName = 'gamereports/' + teamnameDB + '_' + formatted + '.html';
+                  
+                  var fileName = '/var/www/html/gamereports/' + teamnameDB + '_' + formatted + '.html'; 
+                  //var fileName = '/Applications/MAMP/htdocs/skberlaar/gamereports/' + teamnameDB + '_' + formatted + '.html';   
+
+                  fileName = fileName.replace(" ", "_"); 
+
+
+                  fs.writeFile(fileName, htmloutput, function(err){
+                      if (err){
+                          console.log(err);
+                      } else {
+                        console.log("The file was saved");
+                      }
+
+                  });  
+
+                  var mailOptions = {
+                    from: 'skberlaar.app@gmail.com',
+                    to: 'jan.verbinnen@skynet.be',
+                    cc: ccEmailAddressArray,
+                    subject: 'Wedstrijd verslag' + ' ' + teamnameDB,
+                    text: 'Het wedstrijdverslag vind je in attach.',
+                    //html: htmloutput,
+                    attachments: [
+                      {path: fileName
+
+                      }
+                    ]
+                  };
+                  transporter.sendMail(mailOptions, function(error, info){
+                      if(error){
+                        console.log(error);
+                        res.end(JSON.stringify(error));
+                      }else{
+                        console.log('Message sent: ' + info.response);
+                        var outputArray = [];
+                        var outputDic = {
+                            response: info.response
+                        };
+                        outputArray.push(outputDic);
+                        console.log(outputArray);
+                        res.end(JSON.stringify(outputDic));
+                      };
+                  });
+
+                  
+                }else{
+                  console.log('Error while performing Query.1');
+                  var outputArray = [];
+              var outputDic = {
+                   response: "failed"
+                    };
+              outputArray.push(outputDic);
+              console.log(outputArray);
+              res.end(JSON.stringify(outputDic)); 
+                }
+              });
+            }else{
+              console.log('Error while performing Query.2');
+              var outputArray = [];
+              var outputDic = {
+                   response: "failed"
+                    };
+              outputArray.push(outputDic);
+              console.log(outputArray);
+              res.end(JSON.stringify(outputDic)); 
+            }
+          });/*playersquery*/ 
+        }else{
+          console.log('Error while performing Query.3');
+          var outputArray = [];
+              var outputDic = {
+                   response: "failed"
+                    };
+              outputArray.push(outputDic);
+              console.log(outputArray);
+              res.end(JSON.stringify(outputDic)); 
+        }
+    });/*teaminfoquery*/
+  }else{
+    console.log('Error while performing Query.4');
+    var outputArray = [];
+              var outputDic = {
+                   response: "failed"
+                    };
+              outputArray.push(outputDic);
+              console.log(outputArray);
+              res.end(JSON.stringify(outputDic)); 
+  }
+  });/*matchinfoquery*/
+  
+});
+
 /*APN's*/
 
 app.get("/apn/info/:accountid/:deviceid",function(req,res){
