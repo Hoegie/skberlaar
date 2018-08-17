@@ -1295,7 +1295,7 @@ connection.query('SELECT assists FROM teams WHERE team_ID = ?', req.params.teami
 
 app.get("/teams/favorites/:favorites",function(req,res){
   console.log(req.params.favorites);
-  var connquery = "SELECT team_name, team_ID, T1_ID, FROM teams WHERE team_ID IN " + req.params.favorites + " ORDER BY LPAD(lower(team_name), 10,0) ASC" ;
+  var connquery = "SELECT team_name, team_ID, T1_ID FROM teams WHERE team_ID IN " + req.params.favorites + " ORDER BY LPAD(lower(team_name), 10,0) ASC" ;
   console.log(connquery);
 connection.query(connquery, req.params.favorites, function(err, rows, fields) {
 /*connection.end();*/
