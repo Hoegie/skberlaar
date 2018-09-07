@@ -3334,6 +3334,20 @@ connection.query('DELETE FROM tournamentgoals WHERE tournamentgoals_ID = ?', dat
 });
 
 
+/*PRESENCES TRAINERS*/
+
+app.get("/presences/trainers/:month",function(req,res){
+connection.query('SELECT COUNT(events.event_ID) as Aanwezigheden, concat(staff.first_name, " ", staff.last_name) as name, teams.team_name from events JOIN staff on present_staffID = staff_ID JOIN teams on events.teamID = teams.team_ID WHERE MONTH(events.date) LIKE ? AND events.annulation <> 1 GROUP BY staff.last_name, teams.team_name', req.params.month, function(err,result) {
+
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
 /*GPX uploads*/
 
 app.get("/gpxuploads/eventid/:eventid",function(req,res){
