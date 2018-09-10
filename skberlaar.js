@@ -3337,7 +3337,7 @@ connection.query('DELETE FROM tournamentgoals WHERE tournamentgoals_ID = ?', dat
 /*PRESENCES TRAINERS*/
 
 app.get("/presences/trainers/:month",function(req,res){
-connection.query('SELECT COUNT(events.event_ID) as Aanwezigheden, concat(staff.first_name, " ", staff.last_name) as name, teams.team_name from events JOIN staff on present_staffID = staff_ID JOIN teams on events.teamID = teams.team_ID WHERE MONTH(events.date) LIKE ? AND events.annulation <> 1 AND teams.team_name <> "U21 E" GROUP BY staff.last_name, teams.team_name', req.params.month, function(err,result) {
+connection.query('SELECT COUNT(events.event_ID) as Aanwezigheden, events.present_staffID, concat(staff.first_name, " ", staff.last_name) as name, teams.team_name from events JOIN staff on present_staffID = staff_ID JOIN teams on events.teamID = teams.team_ID WHERE MONTH(events.date) LIKE ? AND events.annulation <> 1 AND teams.team_name <> "U21 E" GROUP BY staff.last_name, teams.team_name', req.params.month, function(err,result) {
 
   if (!err){
     console.log(result);
