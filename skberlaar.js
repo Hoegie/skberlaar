@@ -3348,6 +3348,18 @@ connection.query('SELECT COUNT(events.event_ID) as Aanwezigheden, concat(staff.f
   });
 });
 
+app.get("/presences/drilldown/:month/:teamname/:trainerid",function(req,res){
+connection.query("SELECT CONVERT(DATE_FORMAT(events.date,'%d-%m-%Y'), CHAR(50)) as datum, events.event_type, (CASE WHEN events.match_type = 'home' THEN CONCAT('SK BERLAAR', ' - ', opponents.name) WHEN events.match_type = 'away' THEN CONCAT(opponents.name, ' - ', 'SK BERLAAR') ELSE '-' END) AS wedstrijd FROM events JOIN teams on events.teamID = teams.team_ID LEFT JOIN opponents on events.opponentID = opponents.opponent_ID WHERE MONTH(events.date) LIKE ? AND events.present_staffID = ? AND teams.team_name = ?", [req.params.month, req.params.trainerid, req.params.teamname], function(err,result) {
+
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
 /*GPX uploads*/
 
 app.get("/gpxuploads/eventid/:eventid",function(req,res){
