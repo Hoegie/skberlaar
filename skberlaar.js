@@ -3349,7 +3349,7 @@ connection.query('SELECT COUNT(events.event_ID) as Aanwezigheden, events.present
 });
 
 app.get("/presences/drilldown/:month/:teamname/:trainerid",function(req,res){
-connection.query("SELECT CONVERT(DATE_FORMAT(events.date,'%d-%m-%Y'), CHAR(50)) as datum, events.event_type, (CASE WHEN events.match_type = 'home' THEN CONCAT('SK BERLAAR', ' - ', opponents.name) WHEN events.match_type = 'away' THEN CONCAT(opponents.name, ' - ', 'SK BERLAAR') ELSE '-' END) AS wedstrijd FROM events JOIN teams on events.teamID = teams.team_ID LEFT JOIN opponents on events.opponentID = opponents.opponent_ID WHERE MONTH(events.date) LIKE ? AND events.present_staffID = ? AND teams.team_name = ?", [req.params.month, req.params.trainerid, req.params.teamname], function(err,result) {
+connection.query("SELECT CONVERT(DATE_FORMAT(events.date,'%d-%m-%Y'), CHAR(50)) as datum, events.event_type, (CASE WHEN events.match_type = 'home' THEN CONCAT('SK BERLAAR', ' - ', opponents.name) WHEN events.match_type = 'away' THEN CONCAT(opponents.name, ' - ', 'SK BERLAAR') ELSE '-' END) AS wedstrijd FROM events JOIN teams on events.teamID = teams.team_ID LEFT JOIN opponents on events.opponentID = opponents.opponent_ID WHERE MONTH(events.date) LIKE ? AND events.present_staffID = ? AND teams.team_name = ? AND events.annulation <> 1 ORDER BY events.date ASC", [req.params.month, req.params.trainerid, req.params.teamname], function(err,result) {
 
   if (!err){
     console.log(result);
