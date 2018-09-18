@@ -2906,19 +2906,165 @@ connection.query('SELECT goals_ID, goals, timestamps FROM goals WHERE (playerID 
   });
 });
 
+app.get("/goals/gameassists/:eventid/:teamid",function(req,res){
+connection.query("SELECT player_ID, pic_url, full_name, assistcount FROM (SELECT players.player_ID, CONCAT(players.first_name, ' ', players.last_name) as full_name, players.pic_url, ROUND(SUM((LENGTH(goals.assists) - LENGTH(REPLACE(goals.assists, players.player_ID, ''))) / LENGTH(players.player_ID)), 0) as assistcount FROM goals JOIN players ON goals.teamID = players.teamID WHERE players.teamID = ? AND goals.eventID = ? GROUP BY full_name ORDER By assistcount DESC) as x WHERE assistcount <> 0", [req.params.teamid, req.params.eventid], function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+app.get("/goals/gamegoals/:eventid",function(req,res){
+connection.query("SELECT players.player_ID, concat(players.first_name, ' ', players.last_name) as full_name, players.pic_url, goals.goals FROM goals RIGHT JOIN players on goals.playerID = players.player_ID WHERE players.player_ID > 2 AND goals.eventID = ? ORDER BY goals.goals DESC", req.params.eventid, function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+
+app.get("/goals/gameresume/:eventid",function(req,res){
+var eventID = req.params.eventid;
+connection.query("SELECT events.confirmed_players FROM events WHERE event_ID = ?", req.params.eventid, function(err, rows, fields) {
+  if (!err){
+    console.log(rows);
+    var confirms = "(" + rows[0].confirmed_players + ",1" + ",2" +")";
+    
+    var connquery1 = "SELECT players.player_ID, CONCAT(players.first_name, ' ', players.last_name) as full_name FROM players WHERE players.player_ID IN" + confirms;
+    connection.query(connquery1, function(err, rows, fields){
+        if (!err){
+            
+            var confirmedplayersdic = {};
+
+            rows.forEach(function(row, b){
+              confirmedplayersdic[row.player_ID] = row.full_name;
+            });
+
+
+            var connquery2 = "SELECT players.player_ID, players.first_name, players.last_name, COALESCE((SELECT goals.goals from goals WHERE goals.playerid = players.player_ID AND goals.eventID = " + eventID + "), 0) as goals, COALESCE((SELECT goals.timestamps from goals WHERE goals.playerid = players.player_ID AND goals.eventID = " + eventID + "), 'none') as timestamps, COALESCE((SELECT goals.assists from goals WHERE goals.playerid = players.player_ID AND goals.eventID = " + eventID + "), 'none') as assists FROM players where players.player_ID IN " + confirms + " AND COALESCE((SELECT goals.goals from goals WHERE goals.playerid = players.player_ID AND goals.eventID = " + eventID + "), 0) <> '0'";
+              connection.query(connquery2, function(err, rows, fields) {
+              if (!err){
+              
+                            var scoresarray = [];
+                            rows.forEach(function(row, a) {
+
+                                var timestampstring = row.timestamps;
+                                var timestamparray = timestampstring.split(",");
+                                var assiststring = row.assists;
+                                var assistarray = [];
+                                var assistnamearray = [];
+
+                                if (assiststring != 'none'){
+                                    assistarray = assiststring.split(",");
+                                    assistarray.forEach(function(assistID, y){
+                                      if (assistID == 0){
+                                          assistnamearray.push("none");
+                                      } else {
+                                          assistnamearray.push(confirmedplayersdic[assistID]);
+                                      }
+                                    });
+                                }
+                                console.log(assistnamearray);
+
+                                timestamparray.forEach(function(timestampitem,i) {
+
+                                    var assistitem = '';
+                                    if (assiststring != 'none'){
+                                      assistitem = assistnamearray[i];  
+                                    } else {
+                                      assistitem = "none";
+                                    }
+
+                                    var tempscoredic = {
+
+                                        timestamp: timestampitem,
+                                        name: row.first_name + " " + row.last_name,
+                                        player_id: row.player_ID,
+                                        assistName: assistitem
+
+                                    };
+                                    scoresarray.push(tempscoredic);
+
+                                });
+                                scoresarray.sort(function(a,b){return a.timestamp-b.timestamp});
+
+                            });   
+
+
+            res.end(JSON.stringify(scoresarray));
+              }else{
+                console.log('Error2 while performing Query.');
+                //console.log(err);
+            }
+            });
+        } else {
+          console.log('Error1 while performing Query.');
+        }
+    });
+
+  }else{
+    console.log('Error0 while performing Query.');
+  }
+  });
+});
+
 app.post("/goals/new",function(req,res){
-var assiststring;  
+  
+var assiststring;
+var teamID;
 if (typeof req.body.assists == 'undefined' || req.body.assists == null){
   assiststring = 'none';
 } else {
   assiststring = req.body.assists
-}  
+}
+  connection.query('SELECT teamID FROM events WHERE event_ID = ?', req.body.eventid, function(err, rows, fields){
+
+        if (!err){
+
+          teamID = rows[0].teamID;
+
+          var post = {
+                eventID: req.body.eventid,
+                playerID: req.body.playerid,
+                goals: req.body.goals,
+                timestamps: req.body.timestamps,
+                assists: assiststring,
+                teamID: teamID
+            };
+            console.log(post);
+            connection.query('INSERT INTO goals SET ?', post, function(err,result) {
+       
+              if (!err){
+                console.log(result);
+                res.end(JSON.stringify(result));
+              }else{
+                console.log('Error while performing Query2.');
+              }
+            });
+        } else {
+            console.log('Error while performing Query1.');
+        }
+
+  });
+});
+
+app.post("/goalsnew/new",function(req,res){
+ 
   var post = {
         eventID: req.body.eventid,
         playerID: req.body.playerid,
         goals: req.body.goals,
         timestamps: req.body.timestamps,
-        assists: assiststring
+        assists: req.body.assists,
+        teamID: req.body.teamid
     };
     console.log(post);
 connection.query('INSERT INTO goals SET ?', post, function(err,result) {
