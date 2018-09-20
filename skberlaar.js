@@ -3016,6 +3016,19 @@ connection.query("SELECT events.confirmed_players FROM events WHERE event_ID = ?
   });
 });
 
+app.get("/goals/finalscore/:eventid",function(req,res){
+  var query = "SELECT owngoals, opponentgoals FROM (SELECT COALESCE(SUM(goals), 0) as owngoals FROM goals WHERE eventID = " + req.params.eventid + " AND goals.playerID <> 1) as owngoals, (SELECT COALESCE(SUM(goals),0) as opponentgoals FROM goals WHERE eventID = " + req.params.eventid + " AND goals.playerID = 1) as opponentgoals";
+connection.query(query, function(err,result) {
+/*connection.end();*/
+  if (!err){
+    console.log(result);
+    res.end(JSON.stringify(result));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
 app.post("/goals/new",function(req,res){
   
 var assiststring;
