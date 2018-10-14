@@ -2907,7 +2907,7 @@ connection.query('SELECT goals_ID, goals, timestamps FROM goals WHERE (playerID 
 });
 
 app.get("/goals/gameassists/:eventid/:teamid",function(req,res){
-connection.query("SELECT player_ID, pic_url, full_name, assistcount FROM (SELECT players.player_ID, CONCAT(players.first_name, ' ', players.last_name) as full_name, players.pic_url, ROUND(SUM((LENGTH(goals.assists) - LENGTH(REPLACE(goals.assists, players.player_ID, ''))) / LENGTH(players.player_ID)), 0) as assistcount FROM goals JOIN players ON goals.teamID = players.teamID WHERE players.teamID = ? AND goals.eventID = ? GROUP BY full_name ORDER By assistcount DESC) as x WHERE assistcount <> 0", [req.params.teamid, req.params.eventid], function(err,result) {
+connection.query("SELECT player_ID, pic_url, full_name, assistcount FROM (SELECT players.player_ID, CONCAT(players.first_name, ' ', players.last_name) as full_name, players.pic_url, ROUND(SUM((LENGTH(goals.assists)+2 - LENGTH(REPLACE(CONCAT(',', goals.assists, ','), CONCAT(',', players.player_ID, ','),','))) / (LENGTH(players.player_ID)+1))) as assistcount FROM goals JOIN players ON goals.teamID = players.teamID WHERE players.teamID = ? AND goals.eventID = ? GROUP BY full_name ORDER By assistcount DESC) as x WHERE assistcount <> 0", [req.params.teamid, req.params.eventid], function(err,result) {
 /*connection.end();*/
   if (!err){
     console.log(result);
