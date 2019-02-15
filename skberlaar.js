@@ -1,4 +1,4 @@
-//VERSION 2,0,0 Assists
+//VERSION 2,1,0 Dashboard
 var express    = require('express');
 var mysql      = require('mysql');
 var bodyParser = require('body-parser');
@@ -3653,6 +3653,77 @@ fs.readFile(dir + data.filename, function(err,data){
 });
 
 });
+
+
+/*DASHBOARD*/
+
+
+app.get("/dashboard/playerstaffcount",function(req,res){
+connection.query('SELECT (SELECT COUNT(*) from players WHERE player_ID > 2) as players, (SELECT COUNT(*) from staff) as staff', function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    var outputArray = [];
+    var outputDic = {"group": "Players", "count": rows[0].players}
+    outputArray.push(outputDic);
+    var outputDic2 = {"group": "Staff", "count": rows[0].staff}
+    outputArray.push(outputDic2);
+    res.send(JSON.stringify(outputArray));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+
+app.get("/dashboard/teamplayers",function(req,res){
+connection.query("SELECT COUNT(players.player_ID) as count, COALESCE(teams.team_name,'No Team') as teamName FROM players LEFT JOIN teams ON teams.team_ID = players.teamID WHERE players.player_ID > 2 GROUP BY teamName", function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    var outputArray = [];
+    rows.forEach(function(row, i) {
+        var outputDic = {"team" : row.teamName, "count" : row.count};
+        outputArray.push(outputDic);
+    });
+    
+    res.send(JSON.stringify(outputArray));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
+
+app.get("/dashboard/teamresults/:eventtype",function(req,res){
+switch(req.params.eventtype){
+  case 'All':
+    req.params.eventtype = '%';
+    break;
+  case 'Comp':
+    req.params.eventtype = 'Comp. Match';
+    break;
+  case 'Friend':
+    req.params.eventtype = 'Vriend. Match';
+    break;
+  case 'Vacla':
+    req.params.eventtype = 'Vacla';
+    break;
+  default:
+    req.params.eventtype = '%';
+
+}
+connection.query("SELECT teams.team_name, ((SELECT COUNT(results.result_ID) as winshome FROM results JOIN events ON events.event_ID = results.eventID WHERE events.match_type = 'home' AND events.event_type LIKE ? AND results.homegoals > results.awaygoals AND events.teamID = teams.team_ID) + (SELECT COUNT(results.result_ID) as winshome FROM results JOIN events ON events.event_ID = results.eventID WHERE events.match_type = 'away' AND events.event_type LIKE ? AND results.homegoals < results.awaygoals AND events.teamID = teams.team_ID)) as wingames, ((SELECT COUNT(results.result_ID) as winshome FROM results JOIN events ON events.event_ID = results.eventID WHERE events.match_type = 'home' AND events.event_type LIKE ? AND results.homegoals < results.awaygoals AND events.teamID = teams.team_ID) + (SELECT COUNT(results.result_ID) as winshome FROM results JOIN events ON events.event_ID = results.eventID WHERE events.match_type = 'away' AND events.event_type LIKE ? AND results.homegoals > results.awaygoals AND events.teamID = teams.team_ID)) as lostgames, ((SELECT COUNT(results.result_ID) as winshome FROM results JOIN events ON events.event_ID = results.eventID WHERE events.match_type = 'home' AND events.event_type LIKE ? AND results.homegoals = results.awaygoals AND events.teamID = teams.team_ID) + (SELECT COUNT(results.result_ID) as winshome FROM results JOIN events ON events.event_ID = results.eventID WHERE events.match_type = 'away' AND events.event_type LIKE ? AND results.homegoals = results.awaygoals AND events.teamID = teams.team_ID)) as drawgames FROM teams GROUP BY teams.team_name", [req.params.eventtype,req.params.eventtype,req.params.eventtype,req.params.eventtype,req.params.eventtype,req.params.eventtype], function(err, rows, fields) {
+/*connection.end();*/
+  if (!err){
+    console.log('The solution is: ', rows);
+    res.send(JSON.stringify(rows));
+  }else{
+    console.log('Error while performing Query.');
+  }
+  });
+});
+
 
 http.createServer(app).listen(app.get('port'), function(){
   console.log("Express server listening on port " + app.get('port'));
